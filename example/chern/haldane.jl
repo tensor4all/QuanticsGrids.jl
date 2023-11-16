@@ -1,5 +1,5 @@
 import TensorCrossInterpolation as TCI
-using QuanticsTCI
+using QuanticsGrids
 using JLD2
 
 include("chern.jl")

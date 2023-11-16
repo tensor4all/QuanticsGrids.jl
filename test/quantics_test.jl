@@ -1,6 +1,6 @@
 @testitem "quantics.jl" begin
-import QuanticsTCI: quantics_to_index_fused, index_to_quantics
-import QuanticsTCI: interleave_dimensions, deinterleave_dimensions
+import QuanticsGrids: quantics_to_index_fused, index_to_quantics
+import QuanticsGrids: interleave_dimensions, deinterleave_dimensions
 
 
 @testset "quantics representation" begin
@@ -19,7 +19,7 @@ import QuanticsTCI: interleave_dimensions, deinterleave_dimensions
 
         index_reconst = Int[]
         for index in 1:B^R
-            digitlist_ = QuanticsTCI.index_to_quantics(index; numdigits=R, base=B)
+            digitlist_ = QuanticsGrids.index_to_quantics(index; numdigits=R, base=B)
             push!(index_reconst, only(quantics_to_index_fused(digitlist_; base=B, dims=Val(d))))
         end
 
@@ -55,8 +55,8 @@ import QuanticsTCI: interleave_dimensions, deinterleave_dimensions
         for j in 1:base^R, i in 1:base^R
             index = (i, j)
             digitlist = Vector{Int}(undef, R)
-            QuanticsTCI.index_to_quantics_fused!(digitlist, index; base=base)
-            index_reconst = QuanticsTCI.quantics_to_index_fused(digitlist; base=base, dims=Val(dim))
+            QuanticsGrids.index_to_quantics_fused!(digitlist, index; base=base)
+            index_reconst = QuanticsGrids.quantics_to_index_fused(digitlist; base=base, dims=Val(dim))
             @test index == index_reconst
         end
     end

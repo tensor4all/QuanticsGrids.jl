@@ -1,4 +1,4 @@
-module QuanticsTCI
+module QuanticsGrids
 
 using StaticArrays
 #using TensorCrossInterpolation

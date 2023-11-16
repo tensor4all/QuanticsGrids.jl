@@ -3,7 +3,7 @@ module chern
 using LinearAlgebra
 using PyPlot
 import TensorCrossInterpolation as TCI
-using QuanticsTCI
+using QuanticsGrids
 using BenchmarkTools
 using ITensors
 

@@ -1,8 +1,8 @@
-# QuanticsTCI
+# QuanticsGrids
 
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://tensors4fields.gitlab.io/quanticstci.jl/dev/index.html)
-[![pipeline status](https://gitlab.com/tensors4fields/quanticstci.jl/badges/main/pipeline.svg)](https://gitlab.com/tensors4fields/quanticstci.jl/-/commits/main)
-[![coverage report](https://gitlab.com/tensors4fields/quanticstci.jl/badges/main/coverage.svg)](https://gitlab.com/tensors4fields/quanticstci.jl/-/commits/main)
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://tensors4fields.gitlab.io/QuanticsGrids.jl/dev/index.html)
+[![pipeline status](https://gitlab.com/tensors4fields/QuanticsGrids.jl/badges/main/pipeline.svg)](https://gitlab.com/tensors4fields/QuanticsGrids.jl/-/commits/main)
+[![coverage report](https://gitlab.com/tensors4fields/QuanticsGrids.jl/badges/main/coverage.svg)](https://gitlab.com/tensors4fields/QuanticsGrids.jl/-/commits/main)
 
 This module contains utilities for interpolations of functions in the quantics TCI / quantics tensor train (QTT) format.
 
@@ -15,26 +15,26 @@ Until the module is available via `Pkg`, use the following instructions.
 1. Clone the repository to some convenient path
 ```sh
 $ cd /convenient/path
-$ git clone git@gitlab.com:quanticstci/quanticstci.jl.git
+$ git clone git@gitlab.com:QuanticsGrids/QuanticsGrids.jl.git
 ```
 2. In a julia REPL, tell julia where you put the downloaded repository.
 ```julia
-julia> using Pkg; Pkg.dev("convenient/path/quanticstci.jl")
+julia> using Pkg; Pkg.dev("convenient/path/QuanticsGrids.jl")
 ```
 3. You should now be able to import the module.
 ```julia
-julia> using QuanticsTCI
+julia> using QuanticsGrids
 ```
 ---
 
-Once the module has been published, the following will install QuanticsTCI.jl:
+Once the module has been published, the following will install QuanticsGrids.jl:
 
 ```julia
-julia> using Pkg; Pkg.add("QuanticsTCI.jl")
+julia> using Pkg; Pkg.add("QuanticsGrids.jl")
 ```
 
 This module depends on:
-- [TensorCrossInterpolation.jl](https://gitlab.com/quanticstci/tensorcrossinterpolation.jl)
+- [TensorCrossInterpolation.jl](https://gitlab.com/QuanticsGrids/tensorcrossinterpolation.jl)
 - [ITensors.jl](https://github.com/ITensor/ITensors.jl)
 
 Due to ITensors, Julia 1.6 or newer is required.
@@ -99,7 +99,7 @@ Note that the resulting QTCI / QTT takes parameters in quantics form.
 A convenience function that encapsulates the above code block in a single call is being worked on.
 
 ## Related libraries
-- [TensorCrossInterpolation.jl](https://gitlab.com/quanticstci/tensorcrossinterpolation.jl) to calculate tensor cross interpolations.
+- [TensorCrossInterpolation.jl](https://gitlab.com/QuanticsGrids/tensorcrossinterpolation.jl) to calculate tensor cross interpolations.
 - [ITensors.jl](https://github.com/ITensor/ITensors.jl) for MPS / MPO algorithms.
 
 ## References
