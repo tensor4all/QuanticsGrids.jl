@@ -32,7 +32,7 @@ function fuse_dimensions(digitlists...; base::Integer=2)
     return fuse_dimensions!(result, digitlists...; base=base)
 end
 
-function fuse_dimensions!(fused::AbstractArray{<:Integer}, digitlists...; base::Integer=2) 
+function fuse_dimensions!(fused::AbstractArray{<:Integer}, digitlists...; base::Integer=2)
     p = 1
     for d in eachindex(digitlists)
         @. fused += (digitlists[d] - 1) * p
@@ -58,7 +58,7 @@ function unfuse_dimensions!(digitlists, digitlist; base::Integer=2)
     R  = length(digitlist)
     for i in 1:ndim
         for j in 1:R
-           digitlists[i][j] = _digit_at_index(digitlist[j], ndim-i+1; numdigits=ndim, base=base) 
+           digitlists[i][j] = _digit_at_index(digitlist[j], ndim-i+1; numdigits=ndim, base=base)
         end
     end
     return digitlists
@@ -161,7 +161,7 @@ end
 """
 Does the opposite of [`quantics_to_index_fused`](@ref)
 
-* `D`  
+* `D`
 """
 function index_to_quantics_fused!(digitlist::AbstractVector{<:Integer}, index::NTuple{D,<:Integer}; base::Integer=2) where {D}
     R = length(digitlist)
