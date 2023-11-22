@@ -159,7 +159,7 @@ function index_to_quantics!(digitlist, index::Integer; base::Integer=2)
 end
 
 """
-Does the opposite of [`quantics_to_index_fused!`](@ref)
+Does the opposite of [`quantics_to_index_fused`](@ref)
 
 * `D`  
 """
