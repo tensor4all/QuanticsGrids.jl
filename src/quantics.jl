@@ -120,7 +120,7 @@ Convert a d-dimensional index from fused quantics representation to d Integers.
 * `d`           number of dimensions
 * `digitlist`     base-b representation
 
-See also [`quantics_to_index_interleaved`](@ref).
+See also [`quantics_to_index_interleaved`](https://tensors4fields.gitlab.io/quanticstci.jl/dev/#QuanticsTCI.quantics_to_index_interleaved).
 """
 function quantics_to_index_fused(
     digitlist::AbstractVector{<:Integer};
