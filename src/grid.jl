@@ -13,16 +13,43 @@ end
 """
 Convert an grid index to quantices indices
 """
-function grididx_to_quantics(g::Grid{d}, grididx::NTuple{d,Int}) where {d}
-    return index_to_quantics_fused(grididx, numdigits=g.R, base=g.base)
+function grididx_to_quantics(
+    g::Grid{d},
+    grididx::NTuple{d,Int};
+    unfoldingscheme::UnfoldingSchemes.UnfoldingScheme = UnfoldingSchemes.fused,
+) where {d}
+    if unfoldingscheme == UnfoldingSchemes.fused
+        return index_to_quantics_fused(grididx, numdigits = g.R, base = g.base)
+    else
+        return fuse_to_interleaved(
+            index_to_quantics_fused(grididx, numdigits = g.R, base = g.base),
+        )
+    end
 end
 
 """
 Convert fused quantics bitlist to the original coordinate system
 """
-function quantics_to_origcoord_fused(g::Grid{d}, bitlist) where {d}
-    idx = quantics_to_index_fused(bitlist; base=g.base, dims=Val(d))
+function quantics_to_origcoord(
+    g::Grid{d},
+    bitlist;
+    unfoldingscheme::UnfoldingSchemes.UnfoldingScheme = UnfoldingSchemes.fused,
+) where {d}
+    idx = quantics_to_index(
+        bitlist;
+        base = g.base,
+        dims = Val(d),
+        unfoldingscheme = unfoldingscheme,
+    )
     return grididx_to_origcoord(g, idx)
+end
+
+
+"""
+Convert fused quantics bitlist to the original coordinate system
+"""
+function quantics_to_origcoord_fused(g::Grid{d}, bitlist) where {d}
+    return quantics_to_origcoord(g, bitlist; unfoldingscheme = UnfoldingSchemes.fused)
 end
 
 function quantics_function_fused(::Type{T}, g::Grid{d}, f::Function)::Function where {T,d}
@@ -46,7 +73,11 @@ struct InherentDiscreteGrid{d} <: Grid{d}
     origin::NTuple{d,Int}
     base::Int
 
-    function InherentDiscreteGrid{d}(R::Int, origin::NTuple{d,Int}; base::Integer=2) where {d}
+    function InherentDiscreteGrid{d}(
+        R::Int,
+        origin::NTuple{d,Int};
+        base::Integer = 2,
+    ) where {d}
         new(R, origin, base)
     end
 end
@@ -57,18 +88,23 @@ grid_step(grid::InherentDiscreteGrid{d}) where {d} = ntuple(i -> 1, d)
 """
 Create a grid for inherently discrete data with origin at 1
 """
-InherentDiscreteGrid{d}(R::Int; base::Integer=2) where {d} = InherentDiscreteGrid{d}(R, ntuple(i -> 1, d); base=base)
+InherentDiscreteGrid{d}(R::Int; base::Integer = 2) where {d} =
+    InherentDiscreteGrid{d}(R, ntuple(i -> 1, d); base = base)
 
 
 """
 Create a grid for inherently discrete data with origin at 1
 """
-InherentDiscreteGrid{d}(R::Int, origin::Int; base=2) where {d} = InherentDiscreteGrid{d}(R,  ntuple(i -> origin, d); base=base)
+InherentDiscreteGrid{d}(R::Int, origin::Int; base = 2) where {d} =
+    InherentDiscreteGrid{d}(R, ntuple(i -> origin, d); base = base)
 
 """
 Convert a coordinate in the original coordinate system to the corresponding grid index
 """
-function origcoord_to_grididx(g::InherentDiscreteGrid, coordinate::Union{Int,NTuple{N,Int}}) where {N}
+function origcoord_to_grididx(
+    g::InherentDiscreteGrid,
+    coordinate::Union{Int,NTuple{N,Int}},
+) where {N}
     return coordinate .- grid_min(g) .+ 1
 end
 
@@ -86,7 +122,7 @@ struct DiscretizedGrid{d} <: Grid{d}
     grid_max::NTuple{d,Float64}
     base::Int
 
-    function DiscretizedGrid{d}(R::Int, grid_min, grid_max; base::Integer=2) where {d}
+    function DiscretizedGrid{d}(R::Int, grid_min, grid_max; base::Integer = 2) where {d}
         return new(R, grid_min, grid_max, base)
     end
 end
@@ -96,8 +132,8 @@ grid_min(g::DiscretizedGrid) = g.grid_min
 grid_max(g::DiscretizedGrid) = g.grid_max
 grid_step(g::DiscretizedGrid{d}) where {d} = (g.grid_max .- g.grid_min) ./ (g.base^g.R)
 
-function DiscretizedGrid{d}(R::Int; base=2) where {d}
-    return DiscretizedGrid{d}(R, ntuple(i -> 0.0, d), ntuple(i -> 1.0, d); base=base)
+function DiscretizedGrid{d}(R::Int; base = 2) where {d}
+    return DiscretizedGrid{d}(R, ntuple(i -> 0.0, d), ntuple(i -> 1.0, d); base = base)
 end
 
 

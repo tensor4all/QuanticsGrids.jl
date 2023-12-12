@@ -25,7 +25,9 @@
             grid_max = 2.0
             dx = (grid_max - grid_min) / 2^R
             g = QuanticsGrids.DiscretizedGrid{1}(R, (grid_min,), (grid_max,))
-            @test @inferred(QuanticsGrids.origcoord_to_grididx(g, 0.999999 * dx + grid_min)) == 1
+            @test @inferred(
+                QuanticsGrids.origcoord_to_grididx(g, 0.999999 * dx + grid_min)
+            ) == 1
             @test QuanticsGrids.origcoord_to_grididx(g, 1.999999 * dx + grid_min) == 2
             @test QuanticsGrids.origcoord_to_grididx(g, grid_max - 1e-9 * dx) == 2^R
             @test QuanticsGrids.grid_min(g) == (0.1,)
@@ -48,7 +50,7 @@
             cs = [
                 0.999999 .* dx .+ grid_min,
                 1.999999 .* dx .+ grid_min,
-                grid_max .- 1e-9 .* dx
+                grid_max .- 1e-9 .* dx,
             ]
             refs = [1, 2, 2^R]
 
