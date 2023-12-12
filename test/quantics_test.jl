@@ -51,12 +51,16 @@ import QuanticsGrids: interleave_dimensions, deinterleave_dimensions
         base = 2
         dim = 2
         R = 2
-        
+
         for j in 1:base^R, i in 1:base^R
             index = (i, j)
-            digitlist = Vector{Int}(undef, R)
-            QuanticsGrids.index_to_quantics_fused!(digitlist, index; base=base)
-            index_reconst = QuanticsGrids.quantics_to_index_fused(digitlist; base=base, dims=Val(dim))
+
+            digitlist1 = Vector{Int}(undef, R)
+            QuanticsGrids.index_to_quantics_fused!(digitlist1, index; base=base)
+            digitlist2 = QuanticsGrids.index_to_quantics_fused(index; numdigits=R, base=base)
+            @test digitlist1 == digitlist2
+
+            index_reconst = QuanticsGrids.quantics_to_index_fused(digitlist1; base=base, dims=Val(dim))
             @test index == index_reconst
         end
     end
