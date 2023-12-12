@@ -14,7 +14,7 @@ end
 Convert an grid index to quantices indices
 """
 function grididx_to_quantics(g::Grid{d}, grididx::NTuple{d,Int}) where {d}
-    return index_to_fused_quantics(grididx, g.R)
+    return index_to_quantics_fused(grididx, numdigits=g.R, base=g.base)
 end
 
 """
@@ -35,9 +35,9 @@ end
 
 @doc raw"""
 The InherentDiscreteGrid struct represents a grid for inherently discrete data.
-The grid contains values at specific, 
-equally spaced points, but these values do not represent discretized versions 
-of continuous data. Instead, they represent individual data points that are 
+The grid contains values at specific,
+equally spaced points, but these values do not represent discretized versions
+of continuous data. Instead, they represent individual data points that are
 inherently discrete.
 The linear size of the mesh is ``base^R``, where ``base`` defaults to 2.
 """
@@ -77,8 +77,8 @@ end
 The DiscretizedGrid struct represents a grid for discretized continuous data.
 This is used for data that is originally continuous,
 but has been discretized for computational purposes.
-The grid contains values at specific, equally spaced points, which represent discrete 
-approximations of the original continuous data. 
+The grid contains values at specific, equally spaced points, which represent discrete
+approximations of the original continuous data.
 """
 struct DiscretizedGrid{d} <: Grid{d}
     R::Int

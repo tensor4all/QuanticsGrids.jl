@@ -147,6 +147,8 @@ end
 
 
 """
+    function index_to_quantics!(digitlist, index::Integer; base::Integer=2)
+
 * `digitlist`     base-b representation (1d vector)
 * `base`           base for quantics (default: 2)
 """
@@ -159,6 +161,18 @@ function index_to_quantics!(digitlist, index::Integer; base::Integer=2)
 end
 
 """
+    index_to_quantics(index::Integer; numdigits=8, base::Integer=2)
+
+Does the same as [`index_to_quantics!`](@ref) but returns a new vector.
+"""
+function index_to_quantics(index::Integer; numdigits=8, base::Integer=2)
+    digitlist = Vector{Int}(undef, numdigits)
+    return index_to_quantics!(digitlist, index; base=base)
+end
+
+"""
+    index_to_quantics_fused!(digitlist::AbstractVector{<:Integer}, index::NTuple{D,<:Integer}; base::Integer=2) where {D}
+
 Does the opposite of [`quantics_to_index_fused`](@ref)
 
 * `D`
@@ -175,15 +189,9 @@ function index_to_quantics_fused!(digitlist::AbstractVector{<:Integer}, index::N
     return digitlist
 end
 
-
-"""
-    index_to_quantics(index::Integer; numdigits=8, base::Integer=2)
-
-Does the same as [`index_to_quantics!`](@ref) but returns a new vector.
-"""
-function index_to_quantics(index::Integer; numdigits=8, base::Integer=2)
+function index_to_quantics_fused(index::NTuple{D,<:Integer}; numdigits::Integer=8, base::Integer=2) where{D}
     digitlist = Vector{Int}(undef, numdigits)
-    return index_to_quantics!(digitlist, index; base=base)
+    return index_to_quantics_fused!(digitlist, index; base=base)
 end
 
 
