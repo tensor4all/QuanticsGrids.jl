@@ -13,16 +13,14 @@ end
 """
 Convert an grid index to quantices indices
 """
-function grididx_to_quantics(
-    g::Grid{d},
-    grididx::NTuple{d,Int};
-    unfoldingscheme::UnfoldingSchemes.UnfoldingScheme = UnfoldingSchemes.fused,
-) where {d}
-    if unfoldingscheme == UnfoldingSchemes.fused
-        return index_to_quantics_fused(grididx, numdigits = g.R, base = g.base)
+function grididx_to_quantics(g::Grid{d}, grididx::NTuple{d,Int}) where {d}
+    if g.unfoldingscheme == UnfoldingSchemes.fused
+        return index_to_quantics_fused(grididx, numdigits=g.R, base=g.base)
     else
-        return fuse_to_interleaved(
-            index_to_quantics_fused(grididx, numdigits = g.R, base = g.base),
+        return fused_to_interleaved(
+            index_to_quantics_fused(grididx, numdigits=g.R, base=g.base),
+            d,
+            base=g.base
         )
     end
 end
@@ -30,16 +28,12 @@ end
 """
 Convert fused quantics bitlist to the original coordinate system
 """
-function quantics_to_origcoord(
-    g::Grid{d},
-    bitlist;
-    unfoldingscheme::UnfoldingSchemes.UnfoldingScheme = UnfoldingSchemes.fused,
-) where {d}
+function quantics_to_origcoord(g::Grid{d}, bitlist) where {d}
     idx = quantics_to_index(
         bitlist;
-        base = g.base,
-        dims = Val(d),
-        unfoldingscheme = unfoldingscheme,
+        base=g.base,
+        dims=Val(d),
+        unfoldingscheme=g.unfoldingscheme,
     )
     return grididx_to_origcoord(g, idx)
 end
@@ -49,7 +43,7 @@ end
 Convert fused quantics bitlist to the original coordinate system
 """
 function quantics_to_origcoord_fused(g::Grid{d}, bitlist) where {d}
-    return quantics_to_origcoord(g, bitlist; unfoldingscheme = UnfoldingSchemes.fused)
+    return quantics_to_origcoord(g, bitlist)
 end
 
 function quantics_function_fused(::Type{T}, g::Grid{d}, f::Function)::Function where {T,d}
@@ -72,13 +66,15 @@ struct InherentDiscreteGrid{d} <: Grid{d}
     R::Int
     origin::NTuple{d,Int}
     base::Int
+    unfoldingscheme::UnfoldingSchemes.UnfoldingScheme
 
     function InherentDiscreteGrid{d}(
         R::Int,
         origin::NTuple{d,Int};
-        base::Integer = 2,
+        base::Integer=2,
+        unfoldingscheme::UnfoldingSchemes.UnfoldingScheme=UnfoldingSchemes.fused,
     ) where {d}
-        new(R, origin, base)
+        new(R, origin, base, unfoldingscheme)
     end
 end
 
@@ -88,15 +84,28 @@ grid_step(grid::InherentDiscreteGrid{d}) where {d} = ntuple(i -> 1, d)
 """
 Create a grid for inherently discrete data with origin at 1
 """
-InherentDiscreteGrid{d}(R::Int; base::Integer = 2) where {d} =
-    InherentDiscreteGrid{d}(R, ntuple(i -> 1, d); base = base)
+function InherentDiscreteGrid{d}(
+    R::Int;
+    base::Integer=2,
+    unfoldingscheme::UnfoldingSchemes.UnfoldingScheme=UnfoldingSchemes.fused
+) where {d}
+    InherentDiscreteGrid{d}(
+        R, ntuple(i -> 1, d); base=base, unfoldingscheme=unfoldingscheme
+    )
+end
 
 
 """
 Create a grid for inherently discrete data with origin at 1
 """
-InherentDiscreteGrid{d}(R::Int, origin::Int; base = 2) where {d} =
-    InherentDiscreteGrid{d}(R, ntuple(i -> origin, d); base = base)
+function InherentDiscreteGrid{d}(
+    R::Int, origin::Int;
+    base=2, unfoldingscheme::UnfoldingSchemes.UnfoldingScheme=UnfoldingSchemes.fused
+) where {d}
+    InherentDiscreteGrid{d}(
+        R, ntuple(i -> origin, d); base=base, unfoldingscheme=unfoldingscheme
+    )
+end
 
 """
 Convert a coordinate in the original coordinate system to the corresponding grid index
@@ -121,9 +130,14 @@ struct DiscretizedGrid{d} <: Grid{d}
     grid_min::NTuple{d,Float64}
     grid_max::NTuple{d,Float64}
     base::Int
+    unfoldingscheme::UnfoldingSchemes.UnfoldingScheme
 
-    function DiscretizedGrid{d}(R::Int, grid_min, grid_max; base::Integer = 2) where {d}
-        return new(R, grid_min, grid_max, base)
+    function DiscretizedGrid{d}(
+        R::Int, grid_min, grid_max;
+        base::Integer=2,
+        unfoldingscheme::UnfoldingSchemes.UnfoldingScheme=UnfoldingSchemes.fused
+    ) where {d}
+        return new(R, grid_min, grid_max, base, unfoldingscheme)
     end
 end
 
@@ -132,8 +146,15 @@ grid_min(g::DiscretizedGrid) = g.grid_min
 grid_max(g::DiscretizedGrid) = g.grid_max
 grid_step(g::DiscretizedGrid{d}) where {d} = (g.grid_max .- g.grid_min) ./ (g.base^g.R)
 
-function DiscretizedGrid{d}(R::Int; base = 2) where {d}
-    return DiscretizedGrid{d}(R, ntuple(i -> 0.0, d), ntuple(i -> 1.0, d); base = base)
+function DiscretizedGrid{d}(
+    R::Int;
+    base=2,
+    unfoldingscheme::UnfoldingSchemes.UnfoldingScheme=UnfoldingSchemes.fused
+) where {d}
+    return DiscretizedGrid{d}(
+        R, ntuple(i -> 0.0, d), ntuple(i -> 1.0, d);
+        base=base, unfoldingscheme=unfoldingscheme
+    )
 end
 
 
