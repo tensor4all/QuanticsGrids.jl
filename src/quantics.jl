@@ -36,6 +36,7 @@ end
 
 function fuse_dimensions!(fused::AbstractArray{<:Integer}, digitlists...; base::Integer = 2)
     p = 1
+    fused .= 1
     for d in eachindex(digitlists)
         @. fused += (digitlists[d] - 1) * p
         p *= base
@@ -124,7 +125,7 @@ function fused_to_interleaved(
     d;
     base = 2,
 )::Vector{T} where {T<:Integer}
-    return interleave_dimensions(unfused_dimensions(digitlist, d; base = base)...)
+    return interleave_dimensions(unfuse_dimensions(digitlist, d; base = base)...)
 end
 
 """
@@ -136,7 +137,7 @@ function interleaved_to_fused(
     d::Int = 1,
 )::Vector{T} where {T<:Integer}
     fused_digitlist = Vector{T}(undef, length(digitlist) ÷ d)
-    fuse_dimensions!(fused_digitlist, deinterleave_dimensions(digitlist, d))
+    fuse_dimensions!(fused_digitlist, deinterleave_dimensions(digitlist, d)...)
     return fused_digitlist
 end
 
@@ -202,7 +203,7 @@ function quantics_to_index(
         return quantics_to_index_fused(digitlist, base = base, dims = dims)
     else
         return quantics_to_index_fused(
-            interleaved_to_fused(digitlist; base = base, d),
+            interleaved_to_fused(digitlist; base = base, d=d),
             base = base,
             dims = dims,
         )
