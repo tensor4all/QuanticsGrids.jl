@@ -2,8 +2,22 @@
 # Grid for d-dimensional space
 abstract type Grid{d} end
 
+
+#===
+Conversion between grid index, original coordinate, quantics
+
+* grid index => original coordinate (generic)
+* grid index => quantics (generic)
+
+* original coordinate => grid index (implemented for each grid type)
+* original coordinate => quantics (generic)
+
+* quantics => grididx (XXXX)
+* quantics => origcoord (generic)
+===#
+
 """
-Convert a grid index to the corresponding coordinate in the original coordinate system
+grid index => original coordinate
 """
 function grididx_to_origcoord(g::Grid{d}, index::NTuple{d,Int}) where {d}
     all(1 .<= index .<= g.base^g.R) || error("1 <= {index} <= g.base^g.R")
@@ -11,7 +25,7 @@ function grididx_to_origcoord(g::Grid{d}, index::NTuple{d,Int}) where {d}
 end
 
 """
-Convert an grid index to quantices indices
+grid index => quantics
 """
 function grididx_to_quantics(g::Grid{d}, grididx::NTuple{d,Int}) where {d}
     if g.unfoldingscheme == UnfoldingSchemes.fused
@@ -26,26 +40,36 @@ function grididx_to_quantics(g::Grid{d}, grididx::NTuple{d,Int}) where {d}
 end
 
 """
-Convert fused quantics bitlist to the original coordinate system
+original coordinate => quantics
 """
-function quantics_to_origcoord(g::Grid{d}, bitlist) where {d}
-    idx = quantics_to_index(
+function origcoord_to_quantics(g::Grid{d}, coordinate::NTuple{d,T}) where {d,T}
+    return grididx_to_quantics(g, origcoord_to_grididx(g, coordinate))
+end
+
+
+"""
+quantics => grid index
+"""
+function quantics_to_grididx(g::Grid{d}, bitlist) where {d}
+    return quantics_to_index(
         bitlist;
         base=g.base,
         dims=Val(d),
         unfoldingscheme=g.unfoldingscheme,
     )
-    return grididx_to_origcoord(g, idx)
+end
+
+"""
+quantics => original coordinate system
+"""
+function quantics_to_origcoord(g::Grid{d}, bitlist) where {d}
+    return grididx_to_origcoord(g, quantics_to_grididx(g, bitlist))
 end
 
 
 """
-Convert fused quantics bitlist to the original coordinate system
+Make a wrapper function that takes a bitlist as input
 """
-function quantics_to_origcoord_fused(g::Grid{d}, bitlist) where {d}
-    return quantics_to_origcoord(g, bitlist)
-end
-
 function quantics_function_fused(::Type{T}, g::Grid{d}, f::Function)::Function where {T,d}
     function _f(bitlist)::T
         return f(quantics_to_origcoord_fused(g, bitlist)...)

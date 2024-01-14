@@ -1,7 +1,54 @@
 
 @testitem "grid.jl" begin
     using Test
-    import QuanticsGrids
+    import QuanticsGrids as QD
+
+    @testset "grid representation conversion" begin
+        reprs = [:grididx, :quantics, :origcoord]
+
+        R = 10
+        testset = [
+            (QD.DiscretizedGrid{1}(R, (0.0,), (1.0,)), (2,)),
+            (QD.DiscretizedGrid{2}(R, (0.0,0.0), (1.0,1.0)), (2,3)),
+            (QD.InherentDiscreteGrid{1}(R), (2,)),
+            (QD.InherentDiscreteGrid{2}(R), (2,3)),
+        ]
+        for (grid, initial) in testset
+
+            data = Dict{Symbol,Any}()
+            transforms = Dict(
+                (:grididx, :quantics) => QD.grididx_to_quantics,
+                (:grididx, :origcoord) => QD.grididx_to_origcoord,
+                (:quantics, :grididx) => QD.quantics_to_grididx,
+                (:quantics, :origcoord) => QD.quantics_to_origcoord,
+                (:origcoord, :grididx) => QD.origcoord_to_grididx,
+                (:origcoord, :quantics) => QD.origcoord_to_quantics,
+            )
+
+            data[:grididx] = initial
+            while true
+                newdata = false
+                for src in reprs, dst in reprs
+                    if src == dst
+                        continue
+                    end
+                    if !(src ∈ keys(data))
+                        continue
+                    end
+
+                    if dst ∈ keys(data)
+                        @test transforms[(src, dst)](grid, data[src]) == data[dst]
+                    else
+                        data[dst] = @inferred transforms[(src, dst)](grid, data[src])
+                        newdata = true
+                    end
+                end
+                if newdata == false
+                    break
+                end
+            end
+        end
+    end
 
     @testset "InherentDiscreteGrid" for unfoldingscheme in instances(QuanticsGrids.UnfoldingSchemes.UnfoldingScheme)
         m = QuanticsGrids.InherentDiscreteGrid{3}(5; unfoldingscheme)
