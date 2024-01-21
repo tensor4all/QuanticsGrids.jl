@@ -50,10 +50,10 @@
         end
     end
 
-    @testset "InherentDiscreteGrid" for unfoldingscheme in instances(QuanticsGrids.UnfoldingSchemes.UnfoldingScheme)
-        m = QuanticsGrids.InherentDiscreteGrid{3}(5; unfoldingscheme)
-        @test QuanticsGrids.grid_min(m) == (1, 1, 1)
-        @test QuanticsGrids.grid_step(m) == (1, 1, 1)
+    @testset "InherentDiscreteGrid" for unfoldingscheme in instances(QuanticsGrids.UnfoldingSchemes.UnfoldingScheme), step in [(1, 1, 1), (1, 1, 2)], origin in [(1, 1, 1), (1, 1, 2)]
+        m = QuanticsGrids.InherentDiscreteGrid{3}(5, origin; unfoldingscheme, step=step)
+        @test QuanticsGrids.grid_min(m) == origin
+        @test QuanticsGrids.grid_step(m) == step
         for idx in [(1, 1, 1), (1, 1, 2), (1, 25, 1), (14, 1, 1), (25, 25, 25)]
             c = QuanticsGrids.grididx_to_origcoord(m, idx)
             @test QuanticsGrids.origcoord_to_grididx(m, c) == idx

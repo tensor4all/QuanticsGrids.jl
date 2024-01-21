@@ -34,7 +34,7 @@ julia> using Pkg; Pkg.add("QuanticsGrids.jl")
 ```
 
 ## Definition
-We first introduce a $B$-base presetantion ($b=2, 3, 4, \cdots$).
+We first introduce a $B$-base presentation ($b=2, 3, 4, \cdots$).
 To avoid confusing, we will use the 1-based indexing of Julia below.
 We represent a positive integer $X~(\ge 1)$ as $X= \sum_{i=1}^R (x_i-1) \times B^{R-i+1} + 1$, where $x_i$ is either 1 or 2 and $R$ is the number of digits.
 In this library, the $B$-base representation of $X$ is represented by the vector $[x_1, \cdots, x_R]$.
@@ -76,7 +76,7 @@ Here, `DiscretizedGrid` takes one parameter `1`, which denotes the dimension of 
 There are six functions for translating between different reprenstations: 
 `grididx` (1-based linear index), `quantics` and `origcoord` (original coordiate, i.e., $x$).
 
-Exmaple:
+Example:
 ```julia
 quantics = fill(1, R)
 origcoord = (0.0,)
@@ -173,8 +173,8 @@ We provide one example.
 ```julia
 import QuanticsGrids as QD
 R = 4
-# Grid: [0, 1, ..., 2^R-1]
-grid = QD.InherentDiscreteGrid{1}(R, (0,))
+# Grid: [0, 1, ..., 2^R-1]. The second argument (0,) specifies the origin.
+grid = QD.InherentDiscreteGrid{1}(R, (0,); step=(1,))
 
 quantics = fill(1, R)
 origcoord = (0,)
@@ -196,7 +196,7 @@ grididx = (2^R,)
 @assert QD.grididx_to_origcoord(grid, grididx) == origcoord
 @assert QD.origcoord_to_quantics(grid, origcoord) == quantics
 @assert QD.origcoord_to_grididx(grid, origcoord) == grididx
-``````
+```
 
 ## Use a base other than `2`
 When creating a grid, we may want to choose a different base other than 2.

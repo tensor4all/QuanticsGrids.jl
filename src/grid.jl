@@ -91,19 +91,21 @@ struct InherentDiscreteGrid{d} <: Grid{d}
     origin::NTuple{d,Int}
     base::Int
     unfoldingscheme::UnfoldingSchemes.UnfoldingScheme
+    step::NTuple{d,Int}
 
     function InherentDiscreteGrid{d}(
         R::Int,
         origin::NTuple{d,Int};
         base::Integer=2,
         unfoldingscheme::UnfoldingSchemes.UnfoldingScheme=UnfoldingSchemes.fused,
+        step::NTuple{d,Int}=ntuple(i -> 1, d),
     ) where {d}
-        new(R, origin, base, unfoldingscheme)
+        new(R, origin, base, unfoldingscheme, step)
     end
 end
 
 grid_min(grid::InherentDiscreteGrid) = grid.origin
-grid_step(grid::InherentDiscreteGrid{d}) where {d} = ntuple(i -> 1, d)
+grid_step(grid::InherentDiscreteGrid{d}) where {d} = grid.step
 
 """
 Create a grid for inherently discrete data with origin at 1
@@ -111,10 +113,11 @@ Create a grid for inherently discrete data with origin at 1
 function InherentDiscreteGrid{d}(
     R::Int;
     base::Integer=2,
+    step::NTuple{d,Int}=ntuple(i -> 1, d),
     unfoldingscheme::UnfoldingSchemes.UnfoldingScheme=UnfoldingSchemes.fused
 ) where {d}
     InherentDiscreteGrid{d}(
-        R, ntuple(i -> 1, d); base=base, unfoldingscheme=unfoldingscheme
+        R, ntuple(i -> 1, d); base=base, unfoldingscheme=unfoldingscheme, step=step
     )
 end
 
@@ -124,10 +127,11 @@ Create a grid for inherently discrete data with origin at 1
 """
 function InherentDiscreteGrid{d}(
     R::Int, origin::Int;
-    base=2, unfoldingscheme::UnfoldingSchemes.UnfoldingScheme=UnfoldingSchemes.fused
+    base=2, unfoldingscheme::UnfoldingSchemes.UnfoldingScheme=UnfoldingSchemes.fused,
+    step::NTuple{d,Int}=ntuple(i -> 1, d),
 ) where {d}
     InherentDiscreteGrid{d}(
-        R, ntuple(i -> origin, d); base=base, unfoldingscheme=unfoldingscheme
+        R, ntuple(i -> origin, d); base=base, unfoldingscheme=unfoldingscheme, step=step
     )
 end
 
@@ -138,7 +142,7 @@ function origcoord_to_grididx(
     g::InherentDiscreteGrid,
     coordinate::Union{Int,NTuple{N,Int}},
 ) where {N}
-    return coordinate .- grid_min(g) .+ 1
+    return div.(coordinate .- grid_min(g), grid_step(g)) .+ 1
 end
 
 
