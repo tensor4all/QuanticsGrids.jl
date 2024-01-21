@@ -33,12 +33,6 @@ Once the module has been published, the following will install QuanticsGrids.jl:
 julia> using Pkg; Pkg.add("QuanticsGrids.jl")
 ```
 
-This module depends on:
-- [TensorCrossInterpolation.jl](https://gitlab.com/QuanticsGrids/tensorcrossinterpolation.jl)
-- [ITensors.jl](https://github.com/ITensor/ITensors.jl)
-
-Due to ITensors, Julia 1.6 or newer is required.
-
 ## Definition
 We first introduce a $B$-base presetantion ($b=2, 3, 4, \cdots$).
 To avoid confusing, we will use the 1-based indexing of Julia below.
@@ -55,52 +49,175 @@ The fused representaion generalizes to any number of variables.
 
 
 ## Usage
+This package contains two main functionalities:
 
-The main functionality of this package is in the functions `quantics_to_index` and `index_to_quantics`. These translate between linear and quantics representation. For multivariate functions, you have a choice between the *interleaved* and *fused* representation (see QTCI paper [arXiv:2303.11819](http://arxiv.org/abs/2303.11819)). For the *interleaved* representation with `R` bits in each dimension, use
-```julia
-sigma = index_to_quantics_interleaved([u1, u2, u3], R)
-[u1, u2, u3] = quantics_to_index_interleaved(sigma, n)
-```
-where `n` is the number of dimensions.
+1. Low-level functions for converting betwen linear and quantics representations
+2. High-level interface for creating a grid
 
-For the *fused* representation, the methods are very similar:
-```julia
-sigma = index_to_quantics_fused([u1, u2, u3], R)
-[u1, u2, u3] = quantics_to_index_fused(sigma, n)
-```
-Further information can be found in the corresponding docstrings.
+The normal users will use the second high-level interface.
+We will describe its usage.
 
-For convenience, function wrappers are available. If `f` is a function of a single parameter, a quantics version `qf` can be obtained by
-```julia
-qf = QuanticsFunction{Float64}(f)
-```
-Note that the return type of `f` (`Float64` in this case) has to be specified. `qf` can be called like a normal function, and takes a list of quantics indices as its only parameter.
-```julia
-value = f([1, 2, 1, 1, 2, 1])
-```
-For multivariate functions `f`, use `QuanticsFunctionInterleaved` or `QuanticsFunctionFused`. In addition to `f`, the number of dimensions `ndims` has to be specified:
-```julia
-qfinterleaved = QuanticsFunctionInterleaved{Float64}(f, ndims)
-qffused = QuanticsFunctionFused{Float64}(f, ndims)
-```
-All of these objects are suitable for passing to the `TensorCrossInterpolation.crossinterpolate` function. A QTCI of a function `f` can be obtained like this:
-```julia
-R = 5
-f(u) = 1 / (1 + u' * u)
-qfinterleaved = QuanticsFunctionInterleaved{Float64}(f, 4)
-qtci, ranks, errors = TCI.crossinterpolate(Float64, qfinterleaved, fill(2, 4 * R))
-qtt = TCI.TensorTrain(qtci)
-value = f([1, 2, 3, 4])
-println("Exact value: $value")
-qttapprox = qtt(index_to_quantics_interleaved([1, 2, 3, 4], R))
-println("QTT approximated value: $qttapprox")
-```
-Note that the resulting QTCI / QTT takes parameters in quantics form.
-A convenience function that encapsulates the above code block in a single call is being worked on.
+## Discretized grid
+`DiscretizedGrid` can be used to discretize a $d$-dimensional space.
 
-## Related libraries
-- [TensorCrossInterpolation.jl](https://gitlab.com/QuanticsGrids/tensorcrossinterpolation.jl) to calculate tensor cross interpolations.
-- [ITensors.jl](https://github.com/ITensor/ITensors.jl) for MPS / MPO algorithms.
+## Creating a one-dimensional grid
+
+We can create a one-dimensional grid by discretizing $x$ axis on $[0, 1)$ with $R$ bits as
+
+```julia
+import QuanticsGrids as QD
+xmin = 0.0
+xmax = 1.0
+R = 4
+grid = QD.DiscretizedGrid{1}(R, (xmin,), (xmax,))
+````
+
+Here, `DiscretizedGrid` takes one parameter `1`, which denotes the dimension of the grid.
+There are six functions for translating between different reprenstations: 
+`grididx` (1-based linear index), `quantics` and `origcoord` (original coordiate, i.e., $x$).
+
+Exmaple:
+```julia
+quantics = fill(1, R)
+origcoord = (0.0,)
+grididx = (1,)
+@assert QD.quantics_to_grididx(grid, quantics) == grididx
+@assert QD.quantics_to_origcoord(grid, quantics) == origcoord
+@assert QD.grididx_to_quantics(grid, grididx) == quantics
+@assert QD.grididx_to_origcoord(grid, grididx) == origcoord
+@assert QD.origcoord_to_quantics(grid, origcoord) == quantics
+@assert QD.origcoord_to_grididx(grid, origcoord) == grididx
+
+quantics = fill(2, R)
+origcoord = (1-1/2^R,)
+grididx = (2^R,)
+@assert QD.quantics_to_grididx(grid, quantics) == grididx
+@assert QD.quantics_to_origcoord(grid, quantics) == origcoord
+@assert QD.grididx_to_quantics(grid, grididx) == quantics
+@assert QD.grididx_to_origcoord(grid, grididx) == origcoord
+@assert QD.origcoord_to_quantics(grid, origcoord) == quantics
+@assert QD.origcoord_to_grididx(grid, origcoord) == grididx
+```
+
+## Creating a $d$-dimensional grid
+A $d$-dimensional grid, where each axis is discretized with $R$ bits, can be generated in a similar way as follows.
+As an option, you can choose the fused representation (default) or the interleaved representation (`QuanticsGrids.UnfoldingSchemes.interleaved`).
+
+### fused representation
+```julia
+import QuanticsGrids as QD
+xmin, xmax = 0.0, 1.0
+ymin, ymax = 0.0, 1.0
+zmin, zmax = 0.0, 1.0
+R = 4
+grid = QD.DiscretizedGrid{3}(R, (xmin,ymin,zmin), (xmax,ymax,zmax); unfoldingscheme=QD.UnfoldingSchemes.fused)
+
+quantics = fill(1, R)
+origcoord = (0.0, 0.0, 0.0)
+grididx = (1, 1, 1)
+@assert QD.quantics_to_grididx(grid, quantics) == grididx
+@assert QD.quantics_to_origcoord(grid, quantics) == origcoord
+@assert QD.grididx_to_quantics(grid, grididx) == quantics
+@assert QD.grididx_to_origcoord(grid, grididx) == origcoord
+@assert QD.origcoord_to_quantics(grid, origcoord) == quantics
+@assert QD.origcoord_to_grididx(grid, origcoord) == grididx
+
+# Incrementing the least significant fused bits increments the $x$ index.
+quantics = vcat(fill(1, R-1), 2) # [1, 1, ..., 1, 2]
+origcoord = (1/2^R, 0.0, 0.0)
+grididx = (2, 1, 1)
+@assert QD.quantics_to_grididx(grid, quantics) == grididx
+@assert QD.quantics_to_origcoord(grid, quantics) == origcoord
+@assert QD.grididx_to_quantics(grid, grididx) == quantics
+@assert QD.grididx_to_origcoord(grid, grididx) == origcoord
+@assert QD.origcoord_to_quantics(grid, origcoord) == quantics
+@assert QD.origcoord_to_grididx(grid, origcoord) == grididx
+```
+
+### Interleaved representation
+```julia
+import QuanticsGrids as QD
+xmin, xmax = 0.0, 1.0
+ymin, ymax = 0.0, 1.0
+zmin, zmax = 0.0, 1.0
+R = 4
+grid = QD.DiscretizedGrid{3}(R, (xmin,ymin,zmin), (xmax,ymax,zmax); unfoldingscheme=QD.UnfoldingSchemes.interleaved)
+
+# (x1, y1, z1, ...., xR, yR, zR)
+quantics = fill(1, 3R) # length is 3R
+origcoord = (0.0, 0.0, 0.0)
+grididx = (1, 1, 1)
+@assert QD.quantics_to_grididx(grid, quantics) == grididx
+@assert QD.quantics_to_origcoord(grid, quantics) == origcoord
+@assert QD.grididx_to_quantics(grid, grididx) == quantics
+@assert QD.grididx_to_origcoord(grid, grididx) == origcoord
+@assert QD.origcoord_to_quantics(grid, origcoord) == quantics
+@assert QD.origcoord_to_grididx(grid, origcoord) == grididx
+
+quantics = vcat(fill(1, 3R-3), [2, 1, 1]) # [1, 1, 1, ..., 2, 1, 1]
+origcoord = (1/2^R, 0.0, 0.0)
+grididx = (2, 1, 1)
+@assert QD.quantics_to_grididx(grid, quantics) == grididx
+@assert QD.quantics_to_origcoord(grid, quantics) == origcoord
+@assert QD.grididx_to_quantics(grid, grididx) == quantics
+@assert QD.grididx_to_origcoord(grid, grididx) == origcoord
+@assert QD.origcoord_to_quantics(grid, origcoord) == quantics
+@assert QD.origcoord_to_grididx(grid, origcoord) == grididx
+```
+
+## Inherent discrete grid
+`InherentDiscreteGrid` can be used if the target space is discrete.
+`InherentDiscreteGrid`  has a very similar interface to `DiscretizedGrid`.
+We provide one example.
+
+```julia
+import QuanticsGrids as QD
+R = 4
+# Grid: [0, 1, ..., 2^R-1]
+grid = QD.InherentDiscreteGrid{1}(R, (0,))
+
+quantics = fill(1, R)
+origcoord = (0,)
+grididx = (1,)
+@assert QD.quantics_to_grididx(grid, quantics) == grididx
+@assert QD.quantics_to_origcoord(grid, quantics) == origcoord
+@assert QD.grididx_to_quantics(grid, grididx) == quantics
+@assert QD.grididx_to_origcoord(grid, grididx) == origcoord
+@assert QD.origcoord_to_quantics(grid, origcoord) == quantics
+@assert QD.origcoord_to_grididx(grid, origcoord) == grididx
+
+
+quantics = fill(2, R)
+origcoord = (2^R-1,)
+grididx = (2^R,)
+@assert QD.quantics_to_grididx(grid, quantics) == grididx
+@assert QD.quantics_to_origcoord(grid, quantics) == origcoord
+@assert QD.grididx_to_quantics(grid, grididx) == quantics
+@assert QD.grididx_to_origcoord(grid, grididx) == origcoord
+@assert QD.origcoord_to_quantics(grid, origcoord) == quantics
+@assert QD.origcoord_to_grididx(grid, origcoord) == grididx
+``````
+
+## Use a base other than `2`
+When creating a grid, we may want to choose a different base other than 2.
+
+```julia
+import QuanticsGrids as QD
+R = 4
+base = 10
+# Grid: [0, 1, ..., 10^R-1]
+grid = QD.InherentDiscreteGrid{1}(R, (0,); base=10)
+
+quantics = fill(base, R)
+origcoord = (base^R-1,)
+grididx = (base^R,)
+@assert QD.quantics_to_grididx(grid, quantics) == grididx
+@assert QD.quantics_to_origcoord(grid, quantics) == origcoord
+@assert QD.grididx_to_quantics(grid, grididx) == quantics
+@assert QD.grididx_to_origcoord(grid, grididx) == origcoord
+@assert QD.origcoord_to_quantics(grid, origcoord) == quantics
+@assert QD.origcoord_to_grididx(grid, origcoord) == grididx
+```
 
 ## References
 - M. K. Ritter, Y. N. Fernández, M. Wallerberger, J. von Delft, H. Shinaoka, and X. Waintal, *Quantics Tensor Cross Interpolation for High-Resolution, Parsimonious Representations of Multivariate Functions in Physics and Beyond*, [arXiv:2303.11819](http://arxiv.org/abs/2303.11819).
