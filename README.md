@@ -36,15 +36,45 @@ julia> using Pkg; Pkg.add("QuanticsGrids.jl")
 ## Definition
 We first introduce a $B$-base presentation ($b=2, 3, 4, \cdots$).
 To avoid confusing, we will use the 1-based indexing of Julia below.
-We represent a positive integer $X~(\ge 1)$ as $X= \sum_{i=1}^R (x_i-1) \times B^{R-i+1} + 1$, where $x_i$ is either 1 or 2 and $R$ is the number of digits.
-In this library, the $B$-base representation of $X$ is represented by the vector $[x_1, \cdots, x_R]$.
+We represent a positive integer $X~(\ge 1)$ as
+
+$$
+X= \sum_{i=1}^R (x_i-1) \times B^{R-i+1} + 1,
+$$
+
+where $x_i$ is either 1 or 2 and $R$ is the number of digits.
+In this library, the $B$-base representation of $X$ is represented by the vector
+
+$$[x_1, \cdots, x_R].$$
 
 This library supports two unfolding schemes (interleaved and fused representations) for handling multiple variables.
 As an example, we consider three variables $X$, $Y$ and $Z$.
-Their $B$-base representations are given by  $[x_1, \cdots, x_R]$, $[y_1, \cdots, y_R]$, $[z_1, \cdots, z_R]$, respectively.
-The interleaved representation of these variables reads $[x_1, y_1, z_1, x_2, y_2, z_2, \cdots, x_R, y_R, z_R]$.
-The fused representation is given by $[\alpha_1, \alpha_2, \cdots, \alpha_R]$, where $\alpha_i = (x_i-1) + B(y_i-1) + B^2 (z_i-1) + 1$ with $1 \le \alpha_i \le B^3$.
-This convention is consistent with the column major used in Julia: At each digit level $i$, $x_i$ runs fastest.
+Their $B$-base representations are given by
+
+$$[x_1, \cdots, x_R], [y_1, \cdots, y_R], [z_1, \cdots, z_R],$$
+
+respectively.
+The interleaved representation of these variables reads
+
+$$[x_1, y_1, z_1, x_2, y_2, z_2, \cdots, x_R, y_R, z_R].$$
+
+The fused representation is given by
+
+$$[\alpha_1, \alpha_2, \cdots, \alpha_R],$$
+
+where
+
+$$
+\alpha_i = (x_i-1) + B(y_i-1) + B^2 (z_i-1) + 1
+$$
+
+with
+
+$$
+1 \le \alpha_i \le B^3.
+$$
+
+This convention is consistent with the column major used in Julia: At each digit level $i$, the bit for $x$ runs fastest.
 The fused representaion generalizes to any number of variables.
 
 
