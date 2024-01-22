@@ -34,7 +34,7 @@ julia> using Pkg; Pkg.add("QuanticsGrids.jl")
 ```
 
 ## Definition
-We first introduce a $B$-base presentation ($b=2, 3, 4, \cdots$).
+We first introduce a $B$-base presentation ($B=2, 3, 4, \cdots$).
 To avoid confusing, we will use the 1-based indexing of Julia below.
 We represent a positive integer $X~(\ge 1)$ as
 
