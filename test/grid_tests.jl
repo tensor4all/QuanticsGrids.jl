@@ -3,6 +3,18 @@
     using Test
     import QuanticsGrids as QD
 
+
+    @testset "quanticsfunction" begin
+        R = 8
+        grid = QD.DiscretizedGrid{1}(R, (0.0,), (1.0,))
+        fx(x) = exp(-x)
+        fq = QD.quanticsfunction(Float64, grid, fx)
+
+        @test fq(ones(Int, R)) == fx(0.0)
+        @test fq(fill(2, R)) ≈ fx(1.0 - 1/2^R)
+    end
+
+
     @testset "grid representation conversion" begin
         reprs = [:grididx, :quantics, :origcoord]
 

@@ -70,9 +70,9 @@ end
 """
 Make a wrapper function that takes a bitlist as input
 """
-function quantics_function_fused(::Type{T}, g::Grid{d}, f::Function)::Function where {T,d}
+function quanticsfunction(::Type{T}, g::Grid{d}, f::Function)::Function where {T,d}
     function _f(bitlist)::T
-        return f(quantics_to_origcoord_fused(g, bitlist)...)
+        return f(quantics_to_origcoord(g, bitlist)...)
     end
     return _f
 end
