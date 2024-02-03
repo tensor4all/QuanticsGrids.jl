@@ -98,6 +98,22 @@
             @test QuanticsGrids.grid_step(g) == (0.059375,)
         end
 
+        @testset "1D (includeendpoint)" for unfoldingscheme in instances(QuanticsGrids.UnfoldingSchemes.UnfoldingScheme)
+            R = 5
+            grid_min = 0.0
+            grid_max = 1.0
+            dx = (grid_max - grid_min) / (2^R - 1)
+            g = QuanticsGrids.DiscretizedGrid{1}(R, (grid_min,), (grid_max,); unfoldingscheme, includeendpoint=true)
+            @test @inferred(
+                QuanticsGrids.origcoord_to_grididx(g, grid_min)
+            ) == 1
+            @test @inferred(
+                QuanticsGrids.origcoord_to_grididx(g, grid_max)
+            ) == 2^R
+            @test only(QuanticsGrids.grid_step(g)) == dx
+            @test only(QuanticsGrids.quantics_to_origcoord(g, fill(2, R))) == grid_max
+        end
+
         @testset "2D" for unfoldingscheme in instances(QuanticsGrids.UnfoldingSchemes.UnfoldingScheme)
             R = 5
             d = 2
@@ -128,6 +144,17 @@
             @test_throws "Bound Error:" QuanticsGrids.origcoord_to_grididx(g, (3.0, 1.1))
             @test_throws "Bound Error:" QuanticsGrids.origcoord_to_grididx(g, (1.1, 3.0))
             @test_throws "Bound Error:" QuanticsGrids.origcoord_to_grididx(g, (3.0, 3.0))
+        end
+
+        @testset "2D (includeendpoint)" for unfoldingscheme in instances(QuanticsGrids.UnfoldingSchemes.UnfoldingScheme)
+            R = 5
+            d = 2
+            grid_min = (0.1, 0.1)
+            grid_max = (2.0, 2.0)
+            dx = (grid_max .- grid_min) ./ (2^R - 1)
+            g = QuanticsGrids.DiscretizedGrid{d}(R, grid_min, grid_max; unfoldingscheme, includeendpoint=true)
+            @test g.includeendpoint
+            @test QuanticsGrids.grid_step(g) == dx
         end
     end
 end
