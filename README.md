@@ -129,6 +129,19 @@ grididx = (2^R,)
 @assert QD.origcoord_to_grididx(grid, origcoord) == grididx
 ```
 
+Optionally, one can include the end point `grid_max` in a grid as
+
+```julia
+import QuanticsGrids as QD
+xmin = 0.0
+xmax = 1.0
+R = 4
+grid = QD.DiscretizedGrid{1}(R, (xmin,), (xmax,); includeendpoint=true)
+
+@assert QD.grididx_to_origcoord(grid, (1,)) == (xmin,)
+@assert QD.grididx_to_origcoord(grid, (2^R,)) == (xmax,)
+````
+
 ## Creating a $d$-dimensional grid
 A $d$-dimensional grid, where each axis is discretized with $R$ bits, can be generated in a similar way as follows.
 As an option, you can choose the fused representation (default) or the interleaved representation (`QuanticsGrids.UnfoldingSchemes.interleaved`).
@@ -248,6 +261,26 @@ grididx = (base^R,)
 @assert QD.origcoord_to_quantics(grid, origcoord) == quantics
 @assert QD.origcoord_to_grididx(grid, origcoord) == grididx
 ```
+
+## Create a function that takes a quantics index as its input
+When using `QuanticsGrids.jl` in combination with `TensorCrossInterpolation.jl`,
+one can wrap a function to be interpolated to make a fuction that takes a quantics index:
+
+```julia
+import QuanticsGrids as QD
+import TensorCrossInterpolation as TCI
+
+R = 4
+grid = QD.DiscretizedGrid{2}(R, (0.0, 0.0), (1.0, 1.0))
+
+f(x, y) = sin(x + y) # Function to be interpolated
+
+initialpivots = [fill(1, R)]
+localdims = fill(2^2, R)
+fq = QD.quanticsfunction(Float64, grid, f) # fq takes an quantics index as an input
+
+tci, ranks, errors = TCI.crossinterpolate2(Float64, fq, localdims, initialpivots; tolerance=1e-8)
+````
 
 ## References
 - M. K. Ritter, Y. N. Fernández, M. Wallerberger, J. von Delft, H. Shinaoka, and X. Waintal, *Quantics Tensor Cross Interpolation for High-Resolution, Parsimonious Representations of Multivariate Functions in Physics and Beyond*, [arXiv:2303.11819](http://arxiv.org/abs/2303.11819).
