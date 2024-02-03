@@ -123,7 +123,7 @@ end
 
 
 """
-Create a grid for inherently discrete data with origin at 1
+Create a grid for inherently discrete data with origin at an arbitrary point
 """
 function InherentDiscreteGrid{d}(
     R::Int, origin::Int;
@@ -134,6 +134,7 @@ function InherentDiscreteGrid{d}(
         R, ntuple(i -> origin, d); base=base, unfoldingscheme=unfoldingscheme, step=step
     )
 end
+
 
 """
 Convert a coordinate in the original coordinate system to the corresponding grid index
@@ -159,20 +160,22 @@ struct DiscretizedGrid{d} <: Grid{d}
     grid_max::NTuple{d,Float64}
     base::Int
     unfoldingscheme::UnfoldingSchemes.UnfoldingScheme
+    includeendpoint::Bool
 
     function DiscretizedGrid{d}(
         R::Int, grid_min, grid_max;
         base::Integer=2,
-        unfoldingscheme::UnfoldingSchemes.UnfoldingScheme=UnfoldingSchemes.fused
+        unfoldingscheme::UnfoldingSchemes.UnfoldingScheme=UnfoldingSchemes.fused,
+        includeendpoint::Bool=false
     ) where {d}
-        return new(R, grid_min, grid_max, base, unfoldingscheme)
+        return new(R, grid_min, grid_max, base, unfoldingscheme, includeendpoint)
     end
 end
 
-
 grid_min(g::DiscretizedGrid) = g.grid_min
 grid_max(g::DiscretizedGrid) = g.grid_max
-grid_step(g::DiscretizedGrid{d}) where {d} = (g.grid_max .- g.grid_min) ./ (g.base^g.R)
+grid_step(g::DiscretizedGrid{d}) where {d} = g.includeendpoint ? (g.grid_max .- g.grid_min) ./ (g.base^g.R - 1) : (g.grid_max .- g.grid_min) ./ (g.base^g.R)
+
 
 function DiscretizedGrid{d}(
     R::Int;
@@ -190,8 +193,13 @@ end
 Convert a coordinate in the original coordinate system to the corresponding grid index
 """
 function origcoord_to_grididx(g::DiscretizedGrid, coordinate::NTuple{N,Float64}) where {N}
-    all(grid_min(g) .<= coordinate .< grid_max(g)) ||
-        error("Bound Error: $(coordinate), min=$(grid_min(g)), max=$(grid_max(g))")
+    if g.includeendpoint
+        all(grid_min(g) .<= coordinate .<= grid_max(g)) ||
+            error("Bound Error: $(coordinate), min=$(grid_min(g)), max=$(grid_max(g))")
+    else
+        all(grid_min(g) .<= coordinate .< grid_max(g)) ||
+            error("Bound Error: $(coordinate), min=$(grid_min(g)), max=$(grid_max(g))")
+    end
     return ((coordinate .- grid_min(g)) ./ grid_step(g) .+ 1) .|> floor .|> Int
 end
 
