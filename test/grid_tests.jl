@@ -6,7 +6,7 @@
 
     @testset "quanticsfunction" begin
         R = 8
-        grid = QD.DiscretizedGrid{1}(R, (0.0,), (1.0,))
+        grid = QD.DiscretizedGrid{1}(R, 0.0, 1.0)
         fx(x) = exp(-x)
         fq = QD.quanticsfunction(Float64, grid, fx)
 
@@ -20,9 +20,9 @@
 
         R = 10
         testset = [
-            (QD.DiscretizedGrid{1}(R, (0.0,), (1.0,)), (2,)),
-            (QD.DiscretizedGrid{2}(R, (0.0,0.0), (1.0,1.0)), (2,3)),
-            (QD.InherentDiscreteGrid{1}(R), (2,)),
+            (QD.DiscretizedGrid{1}(R, 0.0, 1.0), 2),
+            (QD.DiscretizedGrid{2}(R, (0.0, 0.0), (1.0, 1.0)), (2, 3)),
+            (QD.InherentDiscreteGrid{1}(R), 2),
             (QD.InherentDiscreteGrid{2}(R), (2,3)),
         ]
         for (grid, initial) in testset
@@ -87,15 +87,15 @@
             grid_min = 0.1
             grid_max = 2.0
             dx = (grid_max - grid_min) / 2^R
-            g = QuanticsGrids.DiscretizedGrid{1}(R, (grid_min,), (grid_max,); unfoldingscheme)
+            g = QuanticsGrids.DiscretizedGrid{1}(R, grid_min, grid_max; unfoldingscheme)
             @test @inferred(
                 QuanticsGrids.origcoord_to_grididx(g, 0.999999 * dx + grid_min)
             ) == 1
             @test QuanticsGrids.origcoord_to_grididx(g, 1.999999 * dx + grid_min) == 2
             @test QuanticsGrids.origcoord_to_grididx(g, grid_max - 1e-9 * dx) == 2^R
-            @test QuanticsGrids.grid_min(g) == (0.1,)
-            @test QuanticsGrids.grid_max(g) == (2.0,)
-            @test QuanticsGrids.grid_step(g) == (0.059375,)
+            @test QuanticsGrids.grid_min(g) == 0.1
+            @test QuanticsGrids.grid_max(g) == 2.0
+            @test QuanticsGrids.grid_step(g) == 0.059375
         end
 
         @testset "1D (includeendpoint)" for unfoldingscheme in instances(QuanticsGrids.UnfoldingSchemes.UnfoldingScheme)
@@ -103,7 +103,7 @@
             grid_min = 0.0
             grid_max = 1.0
             dx = (grid_max - grid_min) / (2^R - 1)
-            g = QuanticsGrids.DiscretizedGrid{1}(R, (grid_min,), (grid_max,); unfoldingscheme, includeendpoint=true)
+            g = QuanticsGrids.DiscretizedGrid{1}(R, grid_min, grid_max; unfoldingscheme, includeendpoint=true)
             @test @inferred(
                 QuanticsGrids.origcoord_to_grididx(g, grid_min)
             ) == 1
