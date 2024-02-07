@@ -3,6 +3,12 @@
 abstract type Grid{d} end
 
 
+_convert_to_scalar_if_possible(x) = x
+_convert_to_scalar_if_possible(x::NTuple{1,T}) where {T} = first(x)
+
+_to_tuple(::Val{d}, x::NTuple{d,T}) where {d,T} = x
+_to_tuple(::Val{d}, x) where d = ntuple(i -> x, d)
+
 #===
 Conversion between grid index, original coordinate, quantics
 
@@ -21,8 +27,13 @@ grid index => original coordinate
 """
 function grididx_to_origcoord(g::Grid{d}, index::NTuple{d,Int}) where {d}
     all(1 .<= index .<= g.base^g.R) || error("1 <= {index} <= g.base^g.R")
-    return (index .- 1) .* grid_step(g) .+ grid_min(g)
+    return _convert_to_scalar_if_possible((index .- 1) .* grid_step(g) .+ grid_min(g))
 end
+
+"""
+grid index => original coordinate
+"""
+grididx_to_origcoord(g::Grid{1}, index::Int) = grididx_to_origcoord(g, (index,))
 
 """
 grid index => quantics
@@ -40,10 +51,16 @@ function grididx_to_quantics(g::Grid{d}, grididx::NTuple{d,Int}) where {d}
 end
 
 """
+grid index => quantics
+"""
+grididx_to_quantics(g::Grid{1}, grididx::Int) = grididx_to_quantics(g, (grididx,))
+
+
+"""
 original coordinate => quantics
 """
-function origcoord_to_quantics(g::Grid{d}, coordinate::NTuple{d,T}) where {d,T}
-    return grididx_to_quantics(g, origcoord_to_grididx(g, coordinate))
+function origcoord_to_quantics(g::Grid{d}, coordinate) where {d}
+    return grididx_to_quantics(g, origcoord_to_grididx(g, _to_tuple(Val(d), coordinate)))
 end
 
 
@@ -51,19 +68,21 @@ end
 quantics => grid index
 """
 function quantics_to_grididx(g::Grid{d}, bitlist) where {d}
-    return quantics_to_index(
+    return _convert_to_scalar_if_possible(
+        quantics_to_index(
         bitlist;
         base=g.base,
         dims=Val(d),
         unfoldingscheme=g.unfoldingscheme,
-    )
+    ))
 end
+
 
 """
 quantics => original coordinate system
 """
 function quantics_to_origcoord(g::Grid{d}, bitlist) where {d}
-    return grididx_to_origcoord(g, quantics_to_grididx(g, bitlist))
+    return _convert_to_scalar_if_possible(grididx_to_origcoord(g, quantics_to_grididx(g, bitlist)))
 end
 
 
@@ -95,17 +114,20 @@ struct InherentDiscreteGrid{d} <: Grid{d}
 
     function InherentDiscreteGrid{d}(
         R::Int,
-        origin::NTuple{d,Int};
+        origin::Union{NTuple{d,Int},Int};
         base::Integer=2,
         unfoldingscheme::UnfoldingSchemes.UnfoldingScheme=UnfoldingSchemes.fused,
-        step::NTuple{d,Int}=ntuple(i -> 1, d),
+        step::Union{NTuple{d,Int},Int}=1,
     ) where {d}
-        new(R, origin, base, unfoldingscheme, step)
+        origin_ = origin isa Int ? ntuple(i -> origin, d) : origin
+        step_ = step isa Int ? ntuple(i -> step, d) : step
+        new(R, origin_, base, unfoldingscheme, step_)
     end
+
 end
 
-grid_min(grid::InherentDiscreteGrid) = grid.origin
-grid_step(grid::InherentDiscreteGrid{d}) where {d} = grid.step
+grid_min(grid::InherentDiscreteGrid) = _convert_to_scalar_if_possible(grid.origin)
+grid_step(grid::InherentDiscreteGrid{d}) where {d} = _convert_to_scalar_if_possible(grid.step)
 
 """
 Create a grid for inherently discrete data with origin at 1
@@ -113,11 +135,11 @@ Create a grid for inherently discrete data with origin at 1
 function InherentDiscreteGrid{d}(
     R::Int;
     base::Integer=2,
-    step::NTuple{d,Int}=ntuple(i -> 1, d),
+    step::Union{NTuple{d,Int},Int}=1,
     unfoldingscheme::UnfoldingSchemes.UnfoldingScheme=UnfoldingSchemes.fused
 ) where {d}
     InherentDiscreteGrid{d}(
-        R, ntuple(i -> 1, d); base=base, unfoldingscheme=unfoldingscheme, step=step
+        R, 1; base=base, unfoldingscheme=unfoldingscheme, step=step
     )
 end
 
@@ -125,15 +147,14 @@ end
 """
 Create a grid for inherently discrete data with origin at an arbitrary point
 """
-function InherentDiscreteGrid{d}(
-    R::Int, origin::Int;
-    base=2, unfoldingscheme::UnfoldingSchemes.UnfoldingScheme=UnfoldingSchemes.fused,
-    step::NTuple{d,Int}=ntuple(i -> 1, d),
-) where {d}
-    InherentDiscreteGrid{d}(
-        R, ntuple(i -> origin, d); base=base, unfoldingscheme=unfoldingscheme, step=step
-    )
-end
+#function InherentDiscreteGrid{d}(
+    #R::Int, origin::Union{NTuple{d,Int},Int};
+    #base=2, unfoldingscheme::UnfoldingSchemes.UnfoldingScheme=UnfoldingSchemes.fused,
+#) where {d}
+    #InherentDiscreteGrid{d}(
+        #R, origin; base=base, unfoldingscheme=unfoldingscheme, step=step
+    #)
+#end
 
 
 """
@@ -143,7 +164,7 @@ function origcoord_to_grididx(
     g::InherentDiscreteGrid,
     coordinate::Union{Int,NTuple{N,Int}},
 ) where {N}
-    return div.(coordinate .- grid_min(g), grid_step(g)) .+ 1
+    return _convert_to_scalar_if_possible(div.(coordinate .- grid_min(g), grid_step(g)) .+ 1)
 end
 
 
@@ -168,13 +189,13 @@ struct DiscretizedGrid{d} <: Grid{d}
         unfoldingscheme::UnfoldingSchemes.UnfoldingScheme=UnfoldingSchemes.fused,
         includeendpoint::Bool=false
     ) where {d}
-        return new(R, grid_min, grid_max, base, unfoldingscheme, includeendpoint)
+        return new(R, _to_tuple(Val(d), grid_min), _to_tuple(Val(d), grid_max), base, unfoldingscheme, includeendpoint)
     end
 end
 
-grid_min(g::DiscretizedGrid) = g.grid_min
-grid_max(g::DiscretizedGrid) = g.grid_max
-grid_step(g::DiscretizedGrid{d}) where {d} = g.includeendpoint ? (g.grid_max .- g.grid_min) ./ (g.base^g.R - 1) : (g.grid_max .- g.grid_min) ./ (g.base^g.R)
+grid_min(g::DiscretizedGrid) = _convert_to_scalar_if_possible(g.grid_min)
+grid_max(g::DiscretizedGrid) = _convert_to_scalar_if_possible(g.grid_max)
+grid_step(g::DiscretizedGrid{d}) where {d} = _convert_to_scalar_if_possible(g.includeendpoint ? (g.grid_max .- g.grid_min) ./ (g.base^g.R - 1) : (g.grid_max .- g.grid_min) ./ (g.base^g.R))
 
 
 function DiscretizedGrid{d}(
@@ -200,7 +221,7 @@ function origcoord_to_grididx(g::DiscretizedGrid, coordinate::NTuple{N,Float64})
         all(grid_min(g) .<= coordinate .< grid_max(g)) ||
             error("Bound Error: $(coordinate), min=$(grid_min(g)), max=$(grid_max(g))")
     end
-    return ((coordinate .- grid_min(g)) ./ grid_step(g) .+ 1) .|> floor .|> Int
+    return _convert_to_scalar_if_possible(((coordinate .- grid_min(g)) ./ grid_step(g) .+ 1) .|> floor .|> Int)
 end
 
 function origcoord_to_grididx(g::DiscretizedGrid{1}, coordinate::Float64)
