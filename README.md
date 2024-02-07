@@ -231,8 +231,8 @@ grididx = 1
 
 
 quantics = fill(2, R)
-origcoord = (2^R-1,)
-grididx = (2^R,)
+origcoord = 2^R-1
+grididx = 2^R
 @assert QD.quantics_to_grididx(grid, quantics) == grididx
 @assert QD.quantics_to_origcoord(grid, quantics) == origcoord
 @assert QD.grididx_to_quantics(grid, grididx) == quantics
@@ -252,8 +252,8 @@ base = 10
 grid = QD.InherentDiscreteGrid{1}(R, (0,); base=10)
 
 quantics = fill(base, R)
-origcoord = (base^R-1,)
-grididx = (base^R,)
+origcoord = base^R-1
+grididx = base^R
 @assert QD.quantics_to_grididx(grid, quantics) == grididx
 @assert QD.quantics_to_origcoord(grid, quantics) == origcoord
 @assert QD.grididx_to_quantics(grid, grididx) == quantics
@@ -283,4 +283,4 @@ tci, ranks, errors = TCI.crossinterpolate2(Float64, fq, localdims, initialpivots
 ````
 
 ## References
-- M. K. Ritter, Y. N. Fernández, M. Wallerberger, J. von Delft, H. Shinaoka, and X. Waintal, *Quantics Tensor Cross Interpolation for High-Resolution, Parsimonious Representations of Multivariate Functions in Physics and Beyond*, [arXiv:2303.11819](http://arxiv.org/abs/2303.11819).
+- M. K. Ritter, Y. N. Fernández, M. Wallerberger, J. von Delft, H. Shinaoka, and X. Waintal, *Quantics Tensor Cross Interpolation for High-Resolution, Parsimonious Representations of Multivariate Functions in Physics and Beyond*, [Phys. Rev. Lett. <b>132</b>, 056501 (2024)](https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.132.056501)/[arXiv:2303.11819](http://arxiv.org/abs/2303.11819).
