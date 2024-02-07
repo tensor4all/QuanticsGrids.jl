@@ -99,7 +99,7 @@ import QuanticsGrids as QD
 xmin = 0.0
 xmax = 1.0
 R = 4
-grid = QD.DiscretizedGrid{1}(R, (xmin,), (xmax,))
+grid = QD.DiscretizedGrid{1}(R, xmin, xmax)
 ````
 
 Here, `DiscretizedGrid` takes one parameter `1`, which denotes the dimension of the grid.
@@ -109,8 +109,8 @@ There are six functions for translating between different reprenstations:
 Example:
 ```julia
 quantics = fill(1, R)
-origcoord = (0.0,)
-grididx = (1,)
+origcoord = 0.0
+grididx = 1
 @assert QD.quantics_to_grididx(grid, quantics) == grididx
 @assert QD.quantics_to_origcoord(grid, quantics) == origcoord
 @assert QD.grididx_to_quantics(grid, grididx) == quantics
@@ -119,8 +119,8 @@ grididx = (1,)
 @assert QD.origcoord_to_grididx(grid, origcoord) == grididx
 
 quantics = fill(2, R)
-origcoord = (1-1/2^R,)
-grididx = (2^R,)
+origcoord = 1-1/2^R
+grididx = 2^R
 @assert QD.quantics_to_grididx(grid, quantics) == grididx
 @assert QD.quantics_to_origcoord(grid, quantics) == origcoord
 @assert QD.grididx_to_quantics(grid, grididx) == quantics
@@ -136,10 +136,10 @@ import QuanticsGrids as QD
 xmin = 0.0
 xmax = 1.0
 R = 4
-grid = QD.DiscretizedGrid{1}(R, (xmin,), (xmax,); includeendpoint=true)
+grid = QD.DiscretizedGrid{1}(R, xmin, xmax; includeendpoint=true)
 
-@assert QD.grididx_to_origcoord(grid, (1,)) == (xmin,)
-@assert QD.grididx_to_origcoord(grid, (2^R,)) == (xmax,)
+@assert QD.grididx_to_origcoord(grid, 1) == xmin
+@assert QD.grididx_to_origcoord(grid, 2^R) == xmax
 ````
 
 ## Creating a $d$-dimensional grid
@@ -217,11 +217,11 @@ We provide one example.
 import QuanticsGrids as QD
 R = 4
 # Grid: [0, 1, ..., 2^R-1]. The second argument (0,) specifies the origin.
-grid = QD.InherentDiscreteGrid{1}(R, (0,); step=(1,))
+grid = QD.InherentDiscreteGrid{1}(R, 0; step=1)
 
 quantics = fill(1, R)
-origcoord = (0,)
-grididx = (1,)
+origcoord = 0
+grididx = 1
 @assert QD.quantics_to_grididx(grid, quantics) == grididx
 @assert QD.quantics_to_origcoord(grid, quantics) == origcoord
 @assert QD.grididx_to_quantics(grid, grididx) == quantics
