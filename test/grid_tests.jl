@@ -11,21 +11,37 @@
         fq = QD.quanticsfunction(Float64, grid, fx)
 
         @test fq(ones(Int, R)) == fx(0.0)
-        @test fq(fill(2, R)) ≈ fx(1.0 - 1/2^R)
+        @test fq(fill(2, R)) ≈ fx(1.0 - 1 / 2^R)
     end
 
+    @testset "1D grid (large R)" begin
+        R = 62
+        grid = QD.DiscretizedGrid{1}(R, 0.0, 1.0)
+        @test QD.grididx_to_quantics(grid, 2^R) == fill(2, R)
+    end
 
-    @testset "grid representation conversion" begin
+    @testset "2D grid (large R)" for base in [2]
+        R = 62
+        d = 2
+        grid = QD.DiscretizedGrid{d}(R, 0.0, 1.0; base = base)
+        @test QD.grididx_to_quantics(grid, ntuple(i -> base^R, d)) == fill(base^d, R)
+    end
+
+    @testset "1D grid (too large R)" begin
+        R = 64
+        @test_throws ErrorException QD.DiscretizedGrid{1}(R, 0.0, 1.0)
+    end
+
+    @testset "grid representation conversion" for R in [10]
         reprs = [:grididx, :quantics, :origcoord]
 
-        R = 10
         testset = [
             (QD.DiscretizedGrid{1}(R, 0.0, 1.0), 2),
             (QD.DiscretizedGrid{2}(R, (0.0, 0.0), (1.0, 1.0)), (2, 3)),
             (QD.InherentDiscreteGrid{1}(R), 2),
-            (QD.InherentDiscreteGrid{2}(R), (2,3)),
+            (QD.InherentDiscreteGrid{2}(R), (2, 3)),
         ]
-        for (grid, initial) in testset
+        for (grid, ini_grididx) in testset
 
             data = Dict{Symbol,Any}()
             transforms = Dict(
@@ -37,7 +53,7 @@
                 (:origcoord, :quantics) => QD.origcoord_to_quantics,
             )
 
-            data[:grididx] = initial
+            data[:grididx] = ini_grididx
             while true
                 newdata = false
                 for src in reprs, dst in reprs
@@ -62,8 +78,13 @@
         end
     end
 
-    @testset "InherentDiscreteGrid" for unfoldingscheme in instances(QuanticsGrids.UnfoldingSchemes.UnfoldingScheme), step in [(1, 1, 1), (1, 1, 2)], origin in [(1, 1, 1), (1, 1, 2)]
-        m = QuanticsGrids.InherentDiscreteGrid{3}(5, origin; unfoldingscheme, step=step)
+    @testset "InherentDiscreteGrid" for unfoldingscheme in instances(
+            QuanticsGrids.UnfoldingSchemes.UnfoldingScheme,
+        ),
+        step in [(1, 1, 1), (1, 1, 2)],
+        origin in [(1, 1, 1), (1, 1, 2)]
+
+        m = QuanticsGrids.InherentDiscreteGrid{3}(5, origin; unfoldingscheme, step = step)
         @test QuanticsGrids.grid_min(m) == origin
         @test QuanticsGrids.grid_step(m) == step
         for idx in [(1, 1, 1), (1, 1, 2), (1, 25, 1), (14, 1, 1), (25, 25, 25)]
@@ -81,7 +102,8 @@
         end
     end
 
-    @testset "DiscretizedGrid" for unfoldingscheme in instances(QuanticsGrids.UnfoldingSchemes.UnfoldingScheme)
+    @testset "DiscretizedGrid" for unfoldingscheme in
+                                   instances(QuanticsGrids.UnfoldingSchemes.UnfoldingScheme)
         @testset "1D" begin
             R = 5
             grid_min = 0.1
@@ -98,23 +120,28 @@
             @test QuanticsGrids.grid_step(g) == 0.059375
         end
 
-        @testset "1D (includeendpoint)" for unfoldingscheme in instances(QuanticsGrids.UnfoldingSchemes.UnfoldingScheme)
+        @testset "1D (includeendpoint)" for unfoldingscheme in instances(
+            QuanticsGrids.UnfoldingSchemes.UnfoldingScheme,
+        )
             R = 5
             grid_min = 0.0
             grid_max = 1.0
             dx = (grid_max - grid_min) / (2^R - 1)
-            g = QuanticsGrids.DiscretizedGrid{1}(R, grid_min, grid_max; unfoldingscheme, includeendpoint=true)
-            @test @inferred(
-                QuanticsGrids.origcoord_to_grididx(g, grid_min)
-            ) == 1
-            @test @inferred(
-                QuanticsGrids.origcoord_to_grididx(g, grid_max)
-            ) == 2^R
+            g = QuanticsGrids.DiscretizedGrid{1}(
+                R,
+                grid_min,
+                grid_max;
+                unfoldingscheme,
+                includeendpoint = true,
+            )
+            @test @inferred(QuanticsGrids.origcoord_to_grididx(g, grid_min)) == 1
+            @test @inferred(QuanticsGrids.origcoord_to_grididx(g, grid_max)) == 2^R
             @test only(QuanticsGrids.grid_step(g)) == dx
             @test only(QuanticsGrids.quantics_to_origcoord(g, fill(2, R))) == grid_max
         end
 
-        @testset "2D" for unfoldingscheme in instances(QuanticsGrids.UnfoldingSchemes.UnfoldingScheme)
+        @testset "2D" for unfoldingscheme in
+                          instances(QuanticsGrids.UnfoldingSchemes.UnfoldingScheme)
             R = 5
             d = 2
             grid_min = (0.1, 0.1)
@@ -146,13 +173,21 @@
             @test_throws "Bound Error:" QuanticsGrids.origcoord_to_grididx(g, (3.0, 3.0))
         end
 
-        @testset "2D (includeendpoint)" for unfoldingscheme in instances(QuanticsGrids.UnfoldingSchemes.UnfoldingScheme)
+        @testset "2D (includeendpoint)" for unfoldingscheme in instances(
+            QuanticsGrids.UnfoldingSchemes.UnfoldingScheme,
+        )
             R = 5
             d = 2
             grid_min = (0.1, 0.1)
             grid_max = (2.0, 2.0)
             dx = (grid_max .- grid_min) ./ (2^R - 1)
-            g = QuanticsGrids.DiscretizedGrid{d}(R, grid_min, grid_max; unfoldingscheme, includeendpoint=true)
+            g = QuanticsGrids.DiscretizedGrid{d}(
+                R,
+                grid_min,
+                grid_max;
+                unfoldingscheme,
+                includeendpoint = true,
+            )
             @test g.includeendpoint
             @test QuanticsGrids.grid_step(g) == dx
         end
