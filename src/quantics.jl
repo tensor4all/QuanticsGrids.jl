@@ -203,7 +203,7 @@ function quantics_to_index(
         return quantics_to_index_fused(digitlist, base = base, dims = dims)
     else
         return quantics_to_index_fused(
-            interleaved_to_fused(digitlist; base = base, d=d),
+            interleaved_to_fused(digitlist; base = base, d = d),
             base = base,
             dims = dims,
         )
