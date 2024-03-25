@@ -78,9 +78,8 @@
         end
     end
 
-    @testset "InherentDiscreteGrid" for unfoldingscheme in instances(
-            QuanticsGrids.UnfoldingSchemes.UnfoldingScheme,
-        ),
+    @testset "InherentDiscreteGrid" for
+        unfoldingscheme in [:interleaved, :fused],
         step in [(1, 1, 1), (1, 1, 2)],
         origin in [(1, 1, 1), (1, 1, 2)]
 
@@ -92,7 +91,7 @@
             @test QuanticsGrids.origcoord_to_grididx(m, c) == idx
 
             q = QuanticsGrids.grididx_to_quantics(m, idx)
-            if unfoldingscheme == QuanticsGrids.UnfoldingSchemes.fused
+            if unfoldingscheme === :fused
                 @test length(q) == 5
             else
                 @test length(q) == 3 * 5
@@ -102,8 +101,7 @@
         end
     end
 
-    @testset "DiscretizedGrid" for unfoldingscheme in
-                                   instances(QuanticsGrids.UnfoldingSchemes.UnfoldingScheme)
+    @testset "DiscretizedGrid" for unfoldingscheme in [:interleaved, :fused]
         @testset "1D" begin
             R = 5
             grid_min = 0.1
@@ -120,9 +118,7 @@
             @test QuanticsGrids.grid_step(g) == 0.059375
         end
 
-        @testset "1D (includeendpoint)" for unfoldingscheme in instances(
-            QuanticsGrids.UnfoldingSchemes.UnfoldingScheme,
-        )
+        @testset "1D (includeendpoint)" for unfoldingscheme in [:interleaved, :fused]
             R = 5
             grid_min = 0.0
             grid_max = 1.0
@@ -140,8 +136,7 @@
             @test only(QuanticsGrids.quantics_to_origcoord(g, fill(2, R))) == grid_max
         end
 
-        @testset "2D" for unfoldingscheme in
-                          instances(QuanticsGrids.UnfoldingSchemes.UnfoldingScheme)
+        @testset "2D" for unfoldingscheme in [:interleaved, :fused]
             R = 5
             d = 2
             grid_min = (0.1, 0.1)
@@ -173,9 +168,7 @@
             @test_throws "Bound Error:" QuanticsGrids.origcoord_to_grididx(g, (3.0, 3.0))
         end
 
-        @testset "2D (includeendpoint)" for unfoldingscheme in instances(
-            QuanticsGrids.UnfoldingSchemes.UnfoldingScheme,
-        )
+        @testset "2D (includeendpoint)" for unfoldingscheme in [:interleaved, :fused]
             R = 5
             d = 2
             grid_min = (0.1, 0.1)

@@ -1,6 +1,5 @@
 using ReTestItems: runtests, @testitem
-#using LinearAlgebra
 
-using QuanticsGrids: QuanticsGrids
+using QuanticsGrids
 
 runtests(QuanticsGrids)
