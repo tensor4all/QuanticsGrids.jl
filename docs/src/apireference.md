@@ -1,5 +1,5 @@
 # Documentation
 
 ```@autodocs
-Modules = [QuanticsGrids, QuanticsGrids.UnfoldingSchemes]
+Modules = [QuanticsGrids]
 ```
