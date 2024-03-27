@@ -9,23 +9,23 @@ _convert_to_scalar_if_possible(x::NTuple{1,T}) where {T} = first(x)
 _to_tuple(::Val{d}, x::NTuple{d,T}) where {d,T} = x
 _to_tuple(::Val{d}, x) where {d} = ntuple(i -> x, d)
 
-function digitmax(d, base, unfoldingscheme::UnfoldingSchemes.UnfoldingScheme)
-    if unfoldingscheme == UnfoldingSchemes.fused
+function digitmax(d, base, unfoldingscheme::Symbol)
+    if unfoldingscheme === :fused
         return base^d
     else
         return base
     end
 end
 
-function quanticslength(R, d, unfoldingscheme::UnfoldingSchemes.UnfoldingScheme)
-    if unfoldingscheme == UnfoldingSchemes.fused
+function quanticslength(R, d, unfoldingscheme::Symbol)
+    if unfoldingscheme === :fused
         return R
     else
         return R * d
     end
 end
 
-function _rangecheck_R(R; base = 2)::Int
+function _rangecheck_R(R; base=2)::Int
     base * (BigInt(base)^R - 1) ÷ (base - 1) <= typemax(Int) ||
         error("R too large for base $base")
 end
@@ -60,13 +60,13 @@ grididx_to_origcoord(g::Grid{1}, index::Int) = grididx_to_origcoord(g, (index,))
 grid index => quantics
 """
 function grididx_to_quantics(g::Grid{d}, grididx::NTuple{d,Int}) where {d}
-    if g.unfoldingscheme == UnfoldingSchemes.fused
-        return index_to_quantics_fused(grididx, numdigits = g.R, base = g.base)
+    if g.unfoldingscheme === :fused
+        return index_to_quantics_fused(grididx, numdigits=g.R, base=g.base)
     else
         return fused_to_interleaved(
-            index_to_quantics_fused(grididx, numdigits = g.R, base = g.base),
+            index_to_quantics_fused(grididx, numdigits=g.R, base=g.base),
             d,
-            base = g.base,
+            base=g.base,
         )
     end
 end
@@ -97,9 +97,9 @@ function quantics_to_grididx(g::Grid{d}, bitlist) where {d}
     return _convert_to_scalar_if_possible(
         quantics_to_index(
             bitlist;
-            base = g.base,
-            dims = Val(d),
-            unfoldingscheme = g.unfoldingscheme,
+            base=g.base,
+            dims=Val(d),
+            unfoldingscheme=g.unfoldingscheme,
         ),
     )
 end
@@ -138,17 +138,19 @@ struct InherentDiscreteGrid{d} <: Grid{d}
     R::Int
     origin::NTuple{d,Int}
     base::Int
-    unfoldingscheme::UnfoldingSchemes.UnfoldingScheme
+    unfoldingscheme::Symbol
     step::NTuple{d,Int}
 
     function InherentDiscreteGrid{d}(
         R::Int,
         origin::Union{NTuple{d,Int},Int};
-        base::Integer = 2,
-        unfoldingscheme::UnfoldingSchemes.UnfoldingScheme = UnfoldingSchemes.fused,
-        step::Union{NTuple{d,Int},Int} = 1,
+        base::Integer=2,
+        unfoldingscheme::Symbol=:fused,
+        step::Union{NTuple{d,Int},Int}=1,
     ) where {d}
-        _rangecheck_R(R; base = base)
+        _rangecheck_R(R; base=base)
+        unfoldingscheme in (:fused, :interleaved) ||
+            error("Invalid unfolding scheme: $unfoldingscheme")
         origin_ = origin isa Int ? ntuple(i -> origin, d) : origin
         step_ = step isa Int ? ntuple(i -> step, d) : step
         new(R, origin_, base, unfoldingscheme, step_)
@@ -165,16 +167,16 @@ Create a grid for inherently discrete data with origin at 1
 """
 function InherentDiscreteGrid{d}(
     R::Int;
-    base::Integer = 2,
-    step::Union{NTuple{d,Int},Int} = 1,
-    unfoldingscheme::UnfoldingSchemes.UnfoldingScheme = UnfoldingSchemes.fused,
+    base::Integer=2,
+    step::Union{NTuple{d,Int},Int}=1,
+    unfoldingscheme::Symbol=:fused,
 ) where {d}
     InherentDiscreteGrid{d}(
         R,
         1;
-        base = base,
-        unfoldingscheme = unfoldingscheme,
-        step = step,
+        base=base,
+        unfoldingscheme=unfoldingscheme,
+        step=step,
     )
 end
 
@@ -217,18 +219,20 @@ struct DiscretizedGrid{d} <: Grid{d}
     grid_min::NTuple{d,Float64}
     grid_max::NTuple{d,Float64}
     base::Int
-    unfoldingscheme::UnfoldingSchemes.UnfoldingScheme
+    unfoldingscheme::Symbol
     includeendpoint::Bool
 
     function DiscretizedGrid{d}(
         R::Int,
         grid_min,
         grid_max;
-        base::Integer = 2,
-        unfoldingscheme::UnfoldingSchemes.UnfoldingScheme = UnfoldingSchemes.fused,
-        includeendpoint::Bool = false,
+        base::Integer=2,
+        unfoldingscheme::Symbol=:fused,
+        includeendpoint::Bool=false,
     ) where {d}
-        _rangecheck_R(R; base = base)
+        _rangecheck_R(R; base=base)
+        unfoldingscheme in (:fused, :interleaved) ||
+            error("Invalid unfolding scheme: $unfoldingscheme")
         return new(
             R,
             _to_tuple(Val(d), grid_min),
@@ -250,15 +254,15 @@ grid_step(g::DiscretizedGrid{d}) where {d} = _convert_to_scalar_if_possible(
 
 function DiscretizedGrid{d}(
     R::Int;
-    base = 2,
-    unfoldingscheme::UnfoldingSchemes.UnfoldingScheme = UnfoldingSchemes.fused,
+    base=2,
+    unfoldingscheme::Symbol=:fused,
 ) where {d}
     return DiscretizedGrid{d}(
         R,
         ntuple(i -> 0.0, d),
         ntuple(i -> 1.0, d);
-        base = base,
-        unfoldingscheme = unfoldingscheme,
+        base=base,
+        unfoldingscheme=unfoldingscheme,
     )
 end
 
