@@ -144,7 +144,7 @@ grid = QD.DiscretizedGrid{1}(R, xmin, xmax; includeendpoint=true)
 
 ## Creating a $d$-dimensional grid
 A $d$-dimensional grid, where each axis is discretized with $R$ bits, can be generated in a similar way as follows.
-As an option, you can choose the fused representation (default) or the interleaved representation (`QuanticsGrids.UnfoldingSchemes.interleaved`).
+As an option, you can choose the fused representation (`:fused`) or the interleaved representation (`:interleaved`).
 
 ### fused representation
 ```julia
@@ -153,7 +153,7 @@ xmin, xmax = 0.0, 1.0
 ymin, ymax = 0.0, 1.0
 zmin, zmax = 0.0, 1.0
 R = 4
-grid = QD.DiscretizedGrid{3}(R, (xmin,ymin,zmin), (xmax,ymax,zmax); unfoldingscheme=QD.UnfoldingSchemes.fused)
+grid = QD.DiscretizedGrid{3}(R, (xmin,ymin,zmin), (xmax,ymax,zmax); unfoldingscheme=:fused)
 
 quantics = fill(1, R)
 origcoord = (0.0, 0.0, 0.0)

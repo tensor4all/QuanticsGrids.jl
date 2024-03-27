@@ -149,6 +149,8 @@ struct InherentDiscreteGrid{d} <: Grid{d}
         step::Union{NTuple{d,Int},Int}=1,
     ) where {d}
         _rangecheck_R(R; base=base)
+        unfoldingscheme in (:fused, :interleaved) ||
+            error("Invalid unfolding scheme: $unfoldingscheme")
         origin_ = origin isa Int ? ntuple(i -> origin, d) : origin
         step_ = step isa Int ? ntuple(i -> step, d) : step
         new(R, origin_, base, unfoldingscheme, step_)
@@ -229,6 +231,8 @@ struct DiscretizedGrid{d} <: Grid{d}
         includeendpoint::Bool=false,
     ) where {d}
         _rangecheck_R(R; base=base)
+        unfoldingscheme in (:fused, :interleaved) ||
+            error("Invalid unfolding scheme: $unfoldingscheme")
         return new(
             R,
             _to_tuple(Val(d), grid_min),
