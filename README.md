@@ -8,27 +8,7 @@ This module contains utilities for interpolations of functions in the quantics T
 
 ## Installation
 
----
-
-Until the module is available via `Pkg`, use the following instructions.
-
-1. Clone the repository to some convenient path
-```sh
-$ cd /convenient/path
-$ git clone git@gitlab.com:QuanticsGrids/QuanticsGrids.jl.git
-```
-2. In a julia REPL, tell julia where you put the downloaded repository.
-```julia
-julia> using Pkg; Pkg.dev("convenient/path/QuanticsGrids.jl")
-```
-3. You should now be able to import the module.
-```julia
-julia> using QuanticsGrids
-```
----
-
-Once the module has been published, the following will install QuanticsGrids.jl:
-
+This module has been registered in the General registry. It can be installed by typing the following in a Julia REPL:
 ```julia
 julia> using Pkg; Pkg.add("QuanticsGrids.jl")
 ```
