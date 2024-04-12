@@ -25,6 +25,13 @@ function quanticslength(R, d, unfoldingscheme::Symbol)
     end
 end
 
+function localdimensions(g::Grid{d}) where {d}
+    return fill(
+        digitmax(d, g.base, g.unfoldingscheme),
+        quanticslength(g.R, d, g.unfoldingscheme)
+    )
+end
+
 function _rangecheck_R(R; base=2)::Int
     base * (BigInt(base)^R - 1) ÷ (base - 1) <= typemax(Int) ||
         error("R too large for base $base")
