@@ -1,8 +1,7 @@
 # QuanticsGrids
 
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://tensors4fields.gitlab.io/QuanticsGrids.jl/dev/index.html)
-[![pipeline status](https://gitlab.com/tensors4fields/QuanticsGrids.jl/badges/main/pipeline.svg)](https://gitlab.com/tensors4fields/QuanticsGrids.jl/-/commits/main)
-[![coverage report](https://gitlab.com/tensors4fields/QuanticsGrids.jl/badges/main/coverage.svg)](https://gitlab.com/tensors4fields/QuanticsGrids.jl/-/commits/main)
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://tensor4all.github.io/QuanticsGrids.jl/dev)
+[![CI](https://github.com/tensor4all/QuanticsGrids.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/tensor4all/QuanticsGrids.jl/actions/workflows/CI.yml)
 
 This module contains utilities for interpolations of functions in the quantics TCI / quantics tensor train (QTT) format.
 
@@ -103,7 +102,7 @@ grid = QD.DiscretizedGrid{1}(R, xmin, xmax)
 ````
 
 Here, `DiscretizedGrid` takes one parameter `1`, which denotes the dimension of the grid.
-There are six functions for translating between different reprenstations: 
+There are six functions for translating between different reprenstations:
 `grididx` (1-based linear index), `quantics` and `origcoord` (original coordiate, i.e., $x$).
 In `origcoord_to_quantics` and `origcoord_to_grididx`, if `origcoord` is out of the grid, the function returns the closest point in the grid.
 
