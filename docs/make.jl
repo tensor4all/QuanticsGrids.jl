@@ -17,3 +17,8 @@ makedocs(;
         "Home" => "index.md",
         "API Reference" => "apireference.md",
     ])
+
+deploydocs(;
+    repo="https://gitlab.com/tensors4fields/QuanticsGrids.jl",
+    devbranch="main",
+)
