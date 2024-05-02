@@ -17,6 +17,6 @@ makedocs(;
     ])
 
 deploydocs(;
-    repo="https://github.com/tensor4all/QuanticsGrids.jl",
+    repo="github.com/tensor4all/QuanticsGrids.jl.git",
     devbranch="main",
 )
