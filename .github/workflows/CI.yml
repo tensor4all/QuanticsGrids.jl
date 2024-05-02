@@ -1,5 +1,4 @@
 name: CI
-
 on:
   push:
     branches:
@@ -7,127 +6,50 @@ on:
   pull_request:
     branches:
       - main
-  schedule:
-    - cron: '0 0 * * *' # Schedule for CompatHelper, adjust as needed
-
-env:
-  CI_JULIA_CACHE_DIR: ${{ github.workspace }}/julia_pkg
-  JULIA_DEPOT_PATH: ${{ env.CI_JULIA_CACHE_DIR }}
-
+concurrency:
+  # Skip intermediate builds: always.
+  # Cancel intermediate builds: only if it is a pull request build.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 jobs:
-  setup:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Install Git
-        run: |
-          which git || (sudo apt-get update -qq && sudo apt-get install --no-install-recommends -qqy git)
-
-      - name: Configure Git
-        run: |
-          git config --global url."https://github.com/${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "git@github.com:"
-          git config --global url."https://github.com/${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/" --add
-
-      - name: Set up Julia
-        uses: julia-actions/setup-julia@v1
-        with:
-          version: '1' # Use the latest stable version of Julia
-
-      - name: Configure Julia registry
-        run: |
-          julia -e '
-          using Pkg
-          Pkg.Registry.add(RegistrySpec(url = "https://github.com/JuliaRegistries/General.git"))
-          Pkg.Registry.add(RegistrySpec(url = "https://gitlab.com/tensors4fields/tensors4fieldsregistry.git"))'
-
   test:
-    needs: setup
-    runs-on: ubuntu-latest
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        julia-version: ['1.9', '1']
+        version:
+          - '1.6'
+          - '1'
+          - 'nightly'
+        os:
+          - ubuntu-latest
+          #- macOS-latest
+          #- windows-latest
+        arch:
+          - x64
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Set up Julia
-        uses: julia-actions/setup-julia@v1
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
         with:
-          version: ${{ matrix.julia-version }}
-
-      - name: Build and Test
-        run: |
-          julia --project=@. -e '
-          using Pkg
-          Pkg.build()
-          Pkg.test(coverage=true)'
-
-      - name: Coverage
-        run: |
-          julia -e '
-          using Pkg
-          Pkg.add("Coverage")
-          using Coverage
-          c, t = get_summary(process_folder())
-          using Printf
-          @printf "Test coverage %.2f%%\n" 100 * c / t'
-
-  doctest:
-    needs: setup
+          version: ${{ matrix.version }}
+          arch: ${{ matrix.arch }}
+      - uses: julia-actions/cache@v1
+      - uses: julia-actions/julia-buildpkg@v1
+      - uses: julia-actions/julia-runtest@v1
+        continue-on-error: ${{ matrix.version == 'nightly' }}
+      - uses: julia-actions/julia-processcoverage@v1
+      - uses: codecov/codecov-action@v3
+  docs:
+    name: Documentation
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Set up Julia
-        uses: julia-actions/setup-julia@v1
-        with:
-          version: '1.9' # Specify the version for doctest
-
-      - name: Documenter Doctest
-        run: |
-          julia --project=docs -e '
-          using Pkg
-          Pkg.develop(PackageSpec(path=pwd()))
-          Pkg.instantiate()
-          using Documenter: doctest
-          using QuanticsGrids
-          doctest(QuanticsGrids)
-          include("docs/make.jl")'
-
-      - name: Deploy Pages
-        run: |
-          mkdir -p public
-          mv docs/build public/dev
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: Documentation
-          path: public
-
-  comphelper:
-    if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Set up Julia
-        uses: julia-actions/setup-julia@v1
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
         with:
           version: '1'
-
-      - name: CompatHelper
-        run: |
-          julia --color=yes -e "
-          import Pkg;
-          name = 'CompatHelper';
-          uuid = 'aa819f21-2bde-4658-8897-bab36330d9b7';
-          version = '3';
-          Pkg.add(; name, uuid, version)"
-          julia --color=yes -e "
-          import CompatHelper;
-          CompatHelper.main(;use_existing_registries=true)"
+      - uses: julia-actions/julia-buildpkg@v1
+      - uses: julia-actions/julia-docdeploy@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
