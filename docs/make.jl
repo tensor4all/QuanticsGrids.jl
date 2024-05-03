@@ -6,14 +6,17 @@ DocMeta.setdocmeta!(QuanticsGrids, :DocTestSetup, :(using QuanticsGrids); recurs
 makedocs(;
     modules=[QuanticsGrids],
     authors="Ritter.Marc <Ritter.Marc@physik.uni-muenchen.de> and contributors",
-    repo="https://gitlab.com/tensors4fields/QuanticsGrids.jl/blob/{commit}{path}#{line}",
     sitename="QuanticsGrids.jl",
     format=Documenter.HTML(;
-        prettyurls=get(ENV, "CI", "false") == "true",
-        repolink="https://gitlab.com/tensors4fields/QuanticsGrids.jl",
+        canonical="https://github.com/tensor4all/QuanticsGrids.jl",
         edit_link="main",
         assets=String[]),
     pages=[
         "Home" => "index.md",
         "API Reference" => "apireference.md",
     ])
+
+deploydocs(;
+    repo="github.com/tensor4all/QuanticsGrids.jl.git",
+    devbranch="main",
+)
