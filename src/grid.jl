@@ -166,6 +166,7 @@ struct InherentDiscreteGrid{d} <: Grid{d}
 end
 
 grid_min(grid::InherentDiscreteGrid) = _convert_to_scalar_if_possible(grid.origin)
+grid_max(grid::InherentDiscreteGrid) = _convert_to_scalar_if_possible(grid.origin .+ grid_step(grid) .* (grid.base^grid.R .- 1))
 grid_step(grid::InherentDiscreteGrid{d}) where {d} =
     _convert_to_scalar_if_possible(grid.step)
 
@@ -223,16 +224,16 @@ approximations of the original continuous data.
 """
 struct DiscretizedGrid{d} <: Grid{d}
     R::Int
-    grid_min::NTuple{d,Float64}
-    grid_max::NTuple{d,Float64}
+    lower_bound::NTuple{d,Float64}
+    upper_bound::NTuple{d,Float64}
     base::Int
     unfoldingscheme::Symbol
     includeendpoint::Bool
 
     function DiscretizedGrid{d}(
         R::Int,
-        grid_min,
-        grid_max;
+        lower_bound,
+        upper_bound;
         base::Integer=2,
         unfoldingscheme::Symbol=:fused,
         includeendpoint::Bool=false,
@@ -242,8 +243,8 @@ struct DiscretizedGrid{d} <: Grid{d}
             error("Invalid unfolding scheme: $unfoldingscheme")
         return new(
             R,
-            _to_tuple(Val(d), grid_min),
-            _to_tuple(Val(d), grid_max),
+            _to_tuple(Val(d), lower_bound),
+            _to_tuple(Val(d), upper_bound),
             base,
             unfoldingscheme,
             includeendpoint,
@@ -251,13 +252,15 @@ struct DiscretizedGrid{d} <: Grid{d}
     end
 end
 
-grid_min(g::DiscretizedGrid) = _convert_to_scalar_if_possible(g.grid_min)
-grid_max(g::DiscretizedGrid) = _convert_to_scalar_if_possible(g.grid_max)
+grid_min(g::DiscretizedGrid) = _convert_to_scalar_if_possible(g.lower_bound)
+grid_max(g::DiscretizedGrid) = g.includeendpoint ? _convert_to_scalar_if_possible(g.upper_bound) : _convert_to_scalar_if_possible(g.upper_bound .- grid_step(g))
 grid_step(g::DiscretizedGrid{d}) where {d} = _convert_to_scalar_if_possible(
-    g.includeendpoint ? (g.grid_max .- g.grid_min) ./ (g.base^g.R - 1) :
-    (g.grid_max .- g.grid_min) ./ (g.base^g.R),
+    g.includeendpoint ?
+    (g.upper_bound .- g.lower_bound) ./ (g.base^g.R .- 1) :
+    (g.upper_bound .- g.lower_bound) ./ (g.base^g.R)
 )
-
+upper_bound(g::DiscretizedGrid) = _convert_to_scalar_if_possible(g.upper_bound)
+lower_bound(g::DiscretizedGrid) = _convert_to_scalar_if_possible(g.lower_bound)
 
 function DiscretizedGrid{d}(
     R::Int;
@@ -278,15 +281,11 @@ end
 Convert a coordinate in the original coordinate system to the corresponding grid index
 """
 function origcoord_to_grididx(g::DiscretizedGrid, coordinate::NTuple{N,Float64}) where {N}
-    if g.includeendpoint
-        all(grid_min(g) .<= coordinate .<= grid_max(g)) ||
-            error("Bound Error: $(coordinate), min=$(grid_min(g)), max=$(grid_max(g))")
-    else
-        all(grid_min(g) .<= coordinate .< grid_max(g)) ||
-            error("Bound Error: $(coordinate), min=$(grid_min(g)), max=$(grid_max(g))")
-    end
+    all(lower_bound(g) .<= coordinate .<= upper_bound(g)) ||
+        error("Bound Error: $(coordinate), lower_bound=$(lower_bound(g)), upper_bound=$(upper_bound(g))")
+    clip(x) = max.(1, min.(x, g.base^g.R))
     return _convert_to_scalar_if_possible(
-        ((coordinate .- grid_min(g)) ./ grid_step(g) .+ 1) .|> floor .|> Int,
+        ((coordinate .- grid_min(g)) ./ grid_step(g) .+ 1) .|> round .|> Int .|> clip,
     )
 end
 

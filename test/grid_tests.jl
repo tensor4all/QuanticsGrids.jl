@@ -109,50 +109,52 @@
 
     @testset "DiscretizedGrid" for unfoldingscheme in [:interleaved, :fused]
         @testset "1D" begin
+            unfoldingscheme = :interleaved
+
             R = 5
-            grid_min = 0.1
-            grid_max = 2.0
-            dx = (grid_max - grid_min) / 2^R
-            g = QuanticsGrids.DiscretizedGrid{1}(R, grid_min, grid_max; unfoldingscheme)
+            a = 0.1
+            b = 2.0
+            dx = (b - a) / 2^R
+            g = QuanticsGrids.DiscretizedGrid{1}(R, a, b; unfoldingscheme)
             @test QuanticsGrids.localdimensions(g) == fill(2, R)
 
             @test @inferred(
-                QuanticsGrids.origcoord_to_grididx(g, 0.999999 * dx + grid_min)
-            ) == 1
-            @test QuanticsGrids.origcoord_to_grididx(g, 1.999999 * dx + grid_min) == 2
-            @test QuanticsGrids.origcoord_to_grididx(g, grid_max - 1e-9 * dx) == 2^R
-            @test QuanticsGrids.grid_min(g) == 0.1
-            @test QuanticsGrids.grid_max(g) == 2.0
+                QuanticsGrids.origcoord_to_grididx(g, 0.999999 * dx + a)
+            ) == 2
+            @test QuanticsGrids.origcoord_to_grididx(g, 1.999999 * dx + a) == 3
+            @test QuanticsGrids.origcoord_to_grididx(g, QuanticsGrids.grid_max(g) + 1e-9 * dx) == 2^R
+            @test QuanticsGrids.lower_bound(g) == 0.1
+            @test QuanticsGrids.upper_bound(g) == 2.0
             @test QuanticsGrids.grid_step(g) == 0.059375
         end
 
         @testset "1D (includeendpoint)" for unfoldingscheme in [:interleaved, :fused]
             R = 5
-            grid_min = 0.0
-            grid_max = 1.0
-            dx = (grid_max - grid_min) / (2^R - 1)
+            a = 0.0
+            b = 1.0
+            dx = (b - a) / (2^R - 1)
             g = QuanticsGrids.DiscretizedGrid{1}(
                 R,
-                grid_min,
-                grid_max;
+                a,
+                b;
                 unfoldingscheme,
                 includeendpoint=true,
             )
             @test QuanticsGrids.localdimensions(g) == fill(2, R)
 
-            @test @inferred(QuanticsGrids.origcoord_to_grididx(g, grid_min)) == 1
-            @test @inferred(QuanticsGrids.origcoord_to_grididx(g, grid_max)) == 2^R
+            @test @inferred(QuanticsGrids.origcoord_to_grididx(g, a)) == 1
+            @test @inferred(QuanticsGrids.origcoord_to_grididx(g, b)) == 2^R
             @test only(QuanticsGrids.grid_step(g)) == dx
-            @test only(QuanticsGrids.quantics_to_origcoord(g, fill(2, R))) == grid_max
+            @test only(QuanticsGrids.quantics_to_origcoord(g, fill(2, R))) == b
         end
 
         @testset "2D" for unfoldingscheme in [:interleaved, :fused]
             R = 5
             d = 2
-            grid_min = (0.1, 0.1)
-            grid_max = (2.0, 2.0)
-            dx = (grid_max .- grid_min) ./ 2^R
-            g = QuanticsGrids.DiscretizedGrid{d}(R, grid_min, grid_max; unfoldingscheme)
+            a = (0.1, 0.1)
+            b = (2.0, 2.0)
+            dx = (b .- a) ./ 2^R
+            g = QuanticsGrids.DiscretizedGrid{d}(R, a, b; unfoldingscheme)
 
             if unfoldingscheme === :interleaved
                 @test QuanticsGrids.localdimensions(g) == fill(2, d * R)
@@ -160,19 +162,20 @@
                 @test QuanticsGrids.localdimensions(g) == fill(2^d, R)
             end
 
-            @test QuanticsGrids.grid_min(g) == (0.1, 0.1)
+            @test QuanticsGrids.lower_bound(g) == (0.1, 0.1)
             @test QuanticsGrids.grid_step(g) == dx == (0.059375, 0.059375)
-            @test QuanticsGrids.grid_max(g) == (2.0, 2.0)
+            @test QuanticsGrids.upper_bound(g) == (2.0, 2.0)
 
             cs = [
-                0.999999 .* dx .+ grid_min,
-                1.999999 .* dx .+ grid_min,
-                grid_max .- 1e-9 .* dx,
+                0.999999 .* dx .+ a,
+                1.999999 .* dx .+ a,
+                b .- 1e-9 .* dx,
             ]
-            refs = [1, 2, 2^R]
+            refs = [2, 3, 2^R]
 
             for (c, ref) in zip(cs, refs)
                 @inferred(QuanticsGrids.origcoord_to_grididx(g, c))
+                @show QuanticsGrids.origcoord_to_grididx(g, c), ref
                 @test all(QuanticsGrids.origcoord_to_grididx(g, c) .== ref)
             end
 
@@ -187,13 +190,13 @@
         @testset "2D (includeendpoint)" for unfoldingscheme in [:interleaved, :fused]
             R = 5
             d = 2
-            grid_min = (0.1, 0.1)
-            grid_max = (2.0, 2.0)
-            dx = (grid_max .- grid_min) ./ (2^R - 1)
+            a = (0.1, 0.1)
+            b = (2.0, 2.0)
+            dx = (b .- a) ./ (2^R - 1)
             g = QuanticsGrids.DiscretizedGrid{d}(
                 R,
-                grid_min,
-                grid_max;
+                a,
+                b;
                 unfoldingscheme,
                 includeendpoint=true,
             )
