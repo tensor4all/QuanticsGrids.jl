@@ -85,10 +85,10 @@ We can create a one-dimensional grid by discretizing $x$ axis on $[0, 1)$ with $
 
 ```@example simple
 import QuanticsGrids as QD
-xmin = 0.0
-xmax = 1.0
+xlower = 0.0
+xupper = 1.0
 R = 4
-grid = QD.DiscretizedGrid{1}(R, xmin, xmax)
+grid = QD.DiscretizedGrid{1}(R, xlower, xupper)
 ```
 
 Here, `DiscretizedGrid` takes one parameter `1`, which denotes the dimension of the grid.
@@ -124,13 +124,13 @@ Optionally, one can include the end point `grid_max` in a grid as
 
 ```@example simple
 import QuanticsGrids as QD
-xmin = 0.0
-xmax = 1.0
+xlower = 0.0
+xupper = 1.0
 R = 4
-grid = QD.DiscretizedGrid{1}(R, xmin, xmax; includeendpoint=true)
+grid = QD.DiscretizedGrid{1}(R, xlower, xupper; includeendpoint=true)
 
-@assert QD.grididx_to_origcoord(grid, 1) == xmin
-@assert QD.grididx_to_origcoord(grid, 2^R) == xmax
+@assert QD.grididx_to_origcoord(grid, 1) == xlower
+@assert QD.grididx_to_origcoord(grid, 2^R) == xupper
 ```
 
 ## Creating a $d$-dimensional grid
@@ -140,11 +140,11 @@ As an option, you can choose the fused representation (`:fused`) or the interlea
 ### fused representation
 ```@example simple
 import QuanticsGrids as QD
-xmin, xmax = 0.0, 1.0
-ymin, ymax = 0.0, 1.0
-zmin, zmax = 0.0, 1.0
+xlower, xupper = 0.0, 1.0
+ylower, yupper = 0.0, 1.0
+zlower, zupper = 0.0, 1.0
 R = 4
-grid = QD.DiscretizedGrid{3}(R, (xmin,ymin,zmin), (xmax,ymax,zmax); unfoldingscheme=:fused)
+grid = QD.DiscretizedGrid{3}(R, (xlower,ylower,zlower), (xupper,yupper,zupper); unfoldingscheme=:fused)
 
 quantics = fill(1, R)
 origcoord = (0.0, 0.0, 0.0)
@@ -171,11 +171,11 @@ grididx = (2, 1, 1)
 ### Interleaved representation
 ```@example simple
 import QuanticsGrids as QD
-xmin, xmax = 0.0, 1.0
-ymin, ymax = 0.0, 1.0
-zmin, zmax = 0.0, 1.0
+xlower, xupper = 0.0, 1.0
+ylower, yupper = 0.0, 1.0
+zlower, zupper = 0.0, 1.0
 R = 4
-grid = QD.DiscretizedGrid{3}(R, (xmin,ymin,zmin), (xmax,ymax,zmax); unfoldingscheme=:interleaved)
+grid = QD.DiscretizedGrid{3}(R, (xlower,ylower,zlower), (xupper,yupper,zupper); unfoldingscheme=:interleaved)
 
 # (x1, y1, z1, ...., xR, yR, zR)
 quantics = fill(1, 3R) # length is 3R
