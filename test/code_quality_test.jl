@@ -1,5 +1,4 @@
 @testitem "Code quality (Aqua.jl)" begin
-    using Test
     using Aqua
 
     import QuanticsGrids
