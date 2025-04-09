@@ -123,8 +123,12 @@
             ) == 2
             @test QuanticsGrids.origcoord_to_grididx(g, 1.999999 * dx + a) == 3
             @test QuanticsGrids.origcoord_to_grididx(g, QuanticsGrids.grid_max(g) + 1e-9 * dx) == 2^R
+
             @test QuanticsGrids.lower_bound(g) == 0.1
             @test QuanticsGrids.upper_bound(g) == 2.0
+            @test QuanticsGrids.grid_min(g) == a
+            @test QuanticsGrids.grid_max(g) == b - dx
+
             @test QuanticsGrids.grid_step(g) == 0.059375
         end
 
@@ -141,6 +145,11 @@
                 includeendpoint=true,
             )
             @test QuanticsGrids.localdimensions(g) == fill(2, R)
+
+            @test QuanticsGrids.lower_bound(g) == 0.0
+            @test QuanticsGrids.upper_bound(g) == 1.0
+            @test QuanticsGrids.grid_min(g) == a
+            @test QuanticsGrids.grid_max(g) == b
 
             @test @inferred(QuanticsGrids.origcoord_to_grididx(g, a)) == 1
             @test @inferred(QuanticsGrids.origcoord_to_grididx(g, b)) == 2^R
@@ -165,6 +174,9 @@
             @test QuanticsGrids.lower_bound(g) == (0.1, 0.1)
             @test QuanticsGrids.grid_step(g) == dx == (0.059375, 0.059375)
             @test QuanticsGrids.upper_bound(g) == (2.0, 2.0)
+
+            @test QuanticsGrids.grid_min(g) == a
+            @test QuanticsGrids.grid_max(g) == b .- dx
 
             cs = [
                 0.999999 .* dx .+ a,
