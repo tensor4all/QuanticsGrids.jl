@@ -104,7 +104,7 @@ function deinterleave_dimensions!(
 end
 
 """
-Converrt a fused qunaitcs representation to an unfused quantics representation
+Convert a fused quantics representation to an unfused quantics representation
 """
 function fused_to_interleaved(
     digitlist::AbstractVector{T},
@@ -115,7 +115,7 @@ function fused_to_interleaved(
 end
 
 """
-Converrt a unfused qunaitcs representation to an fused quantics representation
+Convert a unfused quantics representation to an fused quantics representation
 """
 function interleaved_to_fused(
     digitlist::AbstractVector{T};
@@ -225,8 +225,6 @@ end
     index_to_quantics_fused!(digitlist::AbstractVector{<:Integer}, index::NTuple{D,<:Integer}; base::Integer=2) where {D}
 
 Does the opposite of [`quantics_to_index_fused`](@ref)
-
-* `D`
 """
 function index_to_quantics_fused!(
     digitlist::AbstractVector{<:Integer},
