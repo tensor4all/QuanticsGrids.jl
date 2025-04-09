@@ -84,11 +84,11 @@ We will describe its usage.
 We can create a one-dimensional grid by discretizing $x$ axis on $[0, 1)$ with $R$ bits as
 
 ```@example simple
-import QuanticsGrids as QD
-xlower = 0.0
-xupper = 1.0
+import QuanticsGrids as QG
+xmin = 0.0
+xmax = 1.0
 R = 4
-grid = QD.DiscretizedGrid{1}(R, xlower, xupper)
+grid = QG.DiscretizedGrid{1}(R, xmin, xmax)
 ```
 
 Here, `DiscretizedGrid` takes one parameter `1`, which denotes the dimension of the grid.
@@ -102,35 +102,35 @@ Example:
 quantics = fill(1, R)
 origcoord = 0.0
 grididx = 1
-@assert QD.quantics_to_grididx(grid, quantics) == grididx
-@assert QD.quantics_to_origcoord(grid, quantics) == origcoord
-@assert QD.grididx_to_quantics(grid, grididx) == quantics
-@assert QD.grididx_to_origcoord(grid, grididx) == origcoord
-@assert QD.origcoord_to_quantics(grid, origcoord) == quantics
-@assert QD.origcoord_to_grididx(grid, origcoord) == grididx
+@assert QG.quantics_to_grididx(grid, quantics) == grididx
+@assert QG.quantics_to_origcoord(grid, quantics) == origcoord
+@assert QG.grididx_to_quantics(grid, grididx) == quantics
+@assert QG.grididx_to_origcoord(grid, grididx) == origcoord
+@assert QG.origcoord_to_quantics(grid, origcoord) == quantics
+@assert QG.origcoord_to_grididx(grid, origcoord) == grididx
 
 quantics = fill(2, R)
 origcoord = 1-1/2^R
 grididx = 2^R
-@assert QD.quantics_to_grididx(grid, quantics) == grididx
-@assert QD.quantics_to_origcoord(grid, quantics) == origcoord
-@assert QD.grididx_to_quantics(grid, grididx) == quantics
-@assert QD.grididx_to_origcoord(grid, grididx) == origcoord
-@assert QD.origcoord_to_quantics(grid, origcoord) == quantics
-@assert QD.origcoord_to_grididx(grid, origcoord) == grididx
+@assert QG.quantics_to_grididx(grid, quantics) == grididx
+@assert QG.quantics_to_origcoord(grid, quantics) == origcoord
+@assert QG.grididx_to_quantics(grid, grididx) == quantics
+@assert QG.grididx_to_origcoord(grid, grididx) == origcoord
+@assert QG.origcoord_to_quantics(grid, origcoord) == quantics
+@assert QG.origcoord_to_grididx(grid, origcoord) == grididx
 ```
 
 Optionally, one can include the end point `grid_max` in a grid as
 
 ```@example simple
-import QuanticsGrids as QD
-xlower = 0.0
-xupper = 1.0
+import QuanticsGrids as QG
+xmin = 0.0
+xmax = 1.0
 R = 4
-grid = QD.DiscretizedGrid{1}(R, xlower, xupper; includeendpoint=true)
+grid = QG.DiscretizedGrid{1}(R, xmin, xmax; includeendpoint=true)
 
-@assert QD.grididx_to_origcoord(grid, 1) == xlower
-@assert QD.grididx_to_origcoord(grid, 2^R) == xupper
+@assert QG.grididx_to_origcoord(grid, 1) == xmin
+@assert QG.grididx_to_origcoord(grid, 2^R) == xmax
 ```
 
 ## Creating a $d$-dimensional grid
@@ -139,64 +139,64 @@ As an option, you can choose the fused representation (`:fused`) or the interlea
 
 ### fused representation
 ```@example simple
-import QuanticsGrids as QD
-xlower, xupper = 0.0, 1.0
-ylower, yupper = 0.0, 1.0
-zlower, zupper = 0.0, 1.0
+import QuanticsGrids as QG
+xmin, xmax = 0.0, 1.0
+ymin, ymax = 0.0, 1.0
+zmin, zmax = 0.0, 1.0
 R = 4
-grid = QD.DiscretizedGrid{3}(R, (xlower,ylower,zlower), (xupper,yupper,zupper); unfoldingscheme=:fused)
+grid = QG.DiscretizedGrid{3}(R, (xmin,ymin,zmin), (xmax,ymax,zmax); unfoldingscheme=:fused)
 
 quantics = fill(1, R)
 origcoord = (0.0, 0.0, 0.0)
 grididx = (1, 1, 1)
-@assert QD.quantics_to_grididx(grid, quantics) == grididx
-@assert QD.quantics_to_origcoord(grid, quantics) == origcoord
-@assert QD.grididx_to_quantics(grid, grididx) == quantics
-@assert QD.grididx_to_origcoord(grid, grididx) == origcoord
-@assert QD.origcoord_to_quantics(grid, origcoord) == quantics
-@assert QD.origcoord_to_grididx(grid, origcoord) == grididx
+@assert QG.quantics_to_grididx(grid, quantics) == grididx
+@assert QG.quantics_to_origcoord(grid, quantics) == origcoord
+@assert QG.grididx_to_quantics(grid, grididx) == quantics
+@assert QG.grididx_to_origcoord(grid, grididx) == origcoord
+@assert QG.origcoord_to_quantics(grid, origcoord) == quantics
+@assert QG.origcoord_to_grididx(grid, origcoord) == grididx
 
 # Incrementing the least significant fused bits increments the $x$ index.
 quantics = vcat(fill(1, R-1), 2) # [1, 1, ..., 1, 2]
 origcoord = (1/2^R, 0.0, 0.0)
 grididx = (2, 1, 1)
-@assert QD.quantics_to_grididx(grid, quantics) == grididx
-@assert QD.quantics_to_origcoord(grid, quantics) == origcoord
-@assert QD.grididx_to_quantics(grid, grididx) == quantics
-@assert QD.grididx_to_origcoord(grid, grididx) == origcoord
-@assert QD.origcoord_to_quantics(grid, origcoord) == quantics
-@assert QD.origcoord_to_grididx(grid, origcoord) == grididx
+@assert QG.quantics_to_grididx(grid, quantics) == grididx
+@assert QG.quantics_to_origcoord(grid, quantics) == origcoord
+@assert QG.grididx_to_quantics(grid, grididx) == quantics
+@assert QG.grididx_to_origcoord(grid, grididx) == origcoord
+@assert QG.origcoord_to_quantics(grid, origcoord) == quantics
+@assert QG.origcoord_to_grididx(grid, origcoord) == grididx
 ```
 
 ### Interleaved representation
 ```@example simple
-import QuanticsGrids as QD
-xlower, xupper = 0.0, 1.0
-ylower, yupper = 0.0, 1.0
-zlower, zupper = 0.0, 1.0
+import QuanticsGrids as QG
+xmin, xmax = 0.0, 1.0
+ymin, ymax = 0.0, 1.0
+zmin, zmax = 0.0, 1.0
 R = 4
-grid = QD.DiscretizedGrid{3}(R, (xlower,ylower,zlower), (xupper,yupper,zupper); unfoldingscheme=:interleaved)
+grid = QG.DiscretizedGrid{3}(R, (xmin,ymin,zmin), (xmax,ymax,zmax); unfoldingscheme=:interleaved)
 
 # (x1, y1, z1, ...., xR, yR, zR)
 quantics = fill(1, 3R) # length is 3R
 origcoord = (0.0, 0.0, 0.0)
 grididx = (1, 1, 1)
-@assert QD.quantics_to_grididx(grid, quantics) == grididx
-@assert QD.quantics_to_origcoord(grid, quantics) == origcoord
-@assert QD.grididx_to_quantics(grid, grididx) == quantics
-@assert QD.grididx_to_origcoord(grid, grididx) == origcoord
-@assert QD.origcoord_to_quantics(grid, origcoord) == quantics
-@assert QD.origcoord_to_grididx(grid, origcoord) == grididx
+@assert QG.quantics_to_grididx(grid, quantics) == grididx
+@assert QG.quantics_to_origcoord(grid, quantics) == origcoord
+@assert QG.grididx_to_quantics(grid, grididx) == quantics
+@assert QG.grididx_to_origcoord(grid, grididx) == origcoord
+@assert QG.origcoord_to_quantics(grid, origcoord) == quantics
+@assert QG.origcoord_to_grididx(grid, origcoord) == grididx
 
 quantics = vcat(fill(1, 3R-3), [2, 1, 1]) # [1, 1, 1, ..., 2, 1, 1]
 origcoord = (1/2^R, 0.0, 0.0)
 grididx = (2, 1, 1)
-@assert QD.quantics_to_grididx(grid, quantics) == grididx
-@assert QD.quantics_to_origcoord(grid, quantics) == origcoord
-@assert QD.grididx_to_quantics(grid, grididx) == quantics
-@assert QD.grididx_to_origcoord(grid, grididx) == origcoord
-@assert QD.origcoord_to_quantics(grid, origcoord) == quantics
-@assert QD.origcoord_to_grididx(grid, origcoord) == grididx
+@assert QG.quantics_to_grididx(grid, quantics) == grididx
+@assert QG.quantics_to_origcoord(grid, quantics) == origcoord
+@assert QG.grididx_to_quantics(grid, grididx) == quantics
+@assert QG.grididx_to_origcoord(grid, grididx) == origcoord
+@assert QG.origcoord_to_quantics(grid, origcoord) == quantics
+@assert QG.origcoord_to_grididx(grid, origcoord) == grididx
 ```
 
 ## Inherent discrete grid
@@ -205,52 +205,52 @@ grididx = (2, 1, 1)
 We provide one example.
 
 ```@example simple
-import QuanticsGrids as QD
+import QuanticsGrids as QG
 R = 4
 # Grid: [0, 1, ..., 2^R-1]. The second argument (0,) specifies the origin.
-grid = QD.InherentDiscreteGrid{1}(R, 0; step=1)
+grid = QG.InherentDiscreteGrid{1}(R, 0; step=1)
 
 quantics = fill(1, R)
 origcoord = 0
 grididx = 1
-@assert QD.quantics_to_grididx(grid, quantics) == grididx
-@assert QD.quantics_to_origcoord(grid, quantics) == origcoord
-@assert QD.grididx_to_quantics(grid, grididx) == quantics
-@assert QD.grididx_to_origcoord(grid, grididx) == origcoord
-@assert QD.origcoord_to_quantics(grid, origcoord) == quantics
-@assert QD.origcoord_to_grididx(grid, origcoord) == grididx
+@assert QG.quantics_to_grididx(grid, quantics) == grididx
+@assert QG.quantics_to_origcoord(grid, quantics) == origcoord
+@assert QG.grididx_to_quantics(grid, grididx) == quantics
+@assert QG.grididx_to_origcoord(grid, grididx) == origcoord
+@assert QG.origcoord_to_quantics(grid, origcoord) == quantics
+@assert QG.origcoord_to_grididx(grid, origcoord) == grididx
 
 
 quantics = fill(2, R)
 origcoord = 2^R-1
 grididx = 2^R
-@assert QD.quantics_to_grididx(grid, quantics) == grididx
-@assert QD.quantics_to_origcoord(grid, quantics) == origcoord
-@assert QD.grididx_to_quantics(grid, grididx) == quantics
-@assert QD.grididx_to_origcoord(grid, grididx) == origcoord
-@assert QD.origcoord_to_quantics(grid, origcoord) == quantics
-@assert QD.origcoord_to_grididx(grid, origcoord) == grididx
+@assert QG.quantics_to_grididx(grid, quantics) == grididx
+@assert QG.quantics_to_origcoord(grid, quantics) == origcoord
+@assert QG.grididx_to_quantics(grid, grididx) == quantics
+@assert QG.grididx_to_origcoord(grid, grididx) == origcoord
+@assert QG.origcoord_to_quantics(grid, origcoord) == quantics
+@assert QG.origcoord_to_grididx(grid, origcoord) == grididx
 ```
 
 ## Use a base other than `2`
 When creating a grid, we may want to choose a different base other than 2.
 
 ```@example simple
-import QuanticsGrids as QD
+import QuanticsGrids as QG
 R = 4
 base = 10
 # Grid: [0, 1, ..., 10^R-1]
-grid = QD.InherentDiscreteGrid{1}(R, (0,); base=10)
+grid = QG.InherentDiscreteGrid{1}(R, (0,); base=10)
 
 quantics = fill(base, R)
 origcoord = base^R-1
 grididx = base^R
-@assert QD.quantics_to_grididx(grid, quantics) == grididx
-@assert QD.quantics_to_origcoord(grid, quantics) == origcoord
-@assert QD.grididx_to_quantics(grid, grididx) == quantics
-@assert QD.grididx_to_origcoord(grid, grididx) == origcoord
-@assert QD.origcoord_to_quantics(grid, origcoord) == quantics
-@assert QD.origcoord_to_grididx(grid, origcoord) == grididx
+@assert QG.quantics_to_grididx(grid, quantics) == grididx
+@assert QG.quantics_to_origcoord(grid, quantics) == origcoord
+@assert QG.grididx_to_quantics(grid, grididx) == quantics
+@assert QG.grididx_to_origcoord(grid, grididx) == origcoord
+@assert QG.origcoord_to_quantics(grid, origcoord) == quantics
+@assert QG.origcoord_to_grididx(grid, origcoord) == grididx
 ```
 
 ## Create a function that takes a quantics index as its input
@@ -258,17 +258,17 @@ When using `QuanticsGrids.jl` in combination with `TensorCrossInterpolation.jl`,
 one can wrap a function to be interpolated to make a fuction that takes a quantics index:
 
 ```@example simple
-import QuanticsGrids as QD
+import QuanticsGrids as QG
 import TensorCrossInterpolation as TCI
 
 R = 4
-grid = QD.DiscretizedGrid{2}(R, (0.0, 0.0), (1.0, 1.0))
+grid = QG.DiscretizedGrid{2}(R, (0.0, 0.0), (1.0, 1.0))
 
 f(x, y) = sin(x + y) # Function to be interpolated
 
-initialpivots = [QD.origcoord_to_quantics(grid, (0.1, 0.1))] # at (x, y) = (0.1, 0.1)
+initialpivots = [QG.origcoord_to_quantics(grid, (0.1, 0.1))] # at (x, y) = (0.1, 0.1)
 localdims = fill(2^2, R)
-fq = QD.quanticsfunction(Float64, grid, f) # fq takes an quantics index as an input
+fq = QG.quanticsfunction(Float64, grid, f) # fq takes an quantics index as an input
 
 tci, ranks, errors = TCI.crossinterpolate2(Float64, fq, localdims, initialpivots; tolerance=1e-8)
 ```
