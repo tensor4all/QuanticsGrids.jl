@@ -252,14 +252,53 @@ struct DiscretizedGrid{d} <: Grid{d}
     end
 end
 
+"""
+    grid_min(g::DiscretizedGrid)
+
+Returns the grid point with minimal coordinate values.
+This is equivalent to [`lower_bound`](@ref).
+The return value is scalar for 1D grids, and a `Tuple` otherwise.
+"""
 grid_min(g::DiscretizedGrid) = _convert_to_scalar_if_possible(g.lower_bound)
+
+"""
+    grid_max(g::DiscretizedGrid)
+
+Returns the grid point with maximal coordinate values.
+ - If `includeendpoint=false` during creation of the grid, this value is dependent on grid resolution.
+ - If `includeendpoint=true` during creation of the grid, this function is equivalent to [`upper_bound`](@ref).
+The return value is scalar for 1D grids, and a `Tuple` otherwise.
+"""
 grid_max(g::DiscretizedGrid) = g.includeendpoint ? _convert_to_scalar_if_possible(g.upper_bound) : _convert_to_scalar_if_possible(g.upper_bound .- grid_step(g))
+
+"""
+    grid_step(g::DiscretizedGrid)
+
+Returns the distance between adjacent grid points in each dimension.
+The return value is scalar for 1D grids, and a `Tuple` otherwise.
+"""
 grid_step(g::DiscretizedGrid{d}) where {d} = _convert_to_scalar_if_possible(
     g.includeendpoint ?
     (g.upper_bound .- g.lower_bound) ./ (g.base^g.R .- 1) :
     (g.upper_bound .- g.lower_bound) ./ (g.base^g.R)
 )
+"""
+    upper_bound(g::DiscretizedGrid)
+
+Returns the upper bound of the grid coordinates, as passed to the constructor during grid creation.
+ - If `includeendpoint=false` during grid creation, this function returns a point that is one grid spacing beyond the last grid point (which can be obtained through [`grid_max`](@ref)).
+ - If `includeendpoint=true` during grid creation, this function returns the point with maximal coordinate values. This is equivalent to [`grid_max`](@ref).
+The return value is scalar for 1D grids, and a `Tuple` otherwise.
+"""
 upper_bound(g::DiscretizedGrid) = _convert_to_scalar_if_possible(g.upper_bound)
+
+"""
+    grid_min(g::DiscretizedGrid)
+
+Returns the grid point with minimal coordinate values, as passed to the constructor during grid creation.
+This is equivalent to [`grid_min`](@ref).
+The return value is scalar for 1D grids, and a `Tuple` otherwise.
+"""
 lower_bound(g::DiscretizedGrid) = _convert_to_scalar_if_possible(g.lower_bound)
 
 function DiscretizedGrid{d}(
