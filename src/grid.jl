@@ -286,7 +286,7 @@ function origcoord_to_grididx(g::DiscretizedGrid, coordinate::NTuple{N,Float64})
             error("Bound Error: $(coordinate), min=$(grid_min(g)), max=$(grid_max(g))")
     end
     return _convert_to_scalar_if_possible(
-        ((coordinate .- grid_min(g)) ./ grid_step(g) .+ 1) .|> floor .|> Int,
+        ((coordinate .- grid_min(g)) ./ grid_step(g) .+ 1) .|> round .|> Int,
     )
 end
 
