@@ -118,9 +118,9 @@
 
             @test @inferred(
                 QuanticsGrids.origcoord_to_grididx(g, 0.999999 * dx + grid_min)
-            ) == 1
-            @test QuanticsGrids.origcoord_to_grididx(g, 1.999999 * dx + grid_min) == 2
-            @test QuanticsGrids.origcoord_to_grididx(g, grid_max - 1e-9 * dx) == 2^R
+            ) == 2
+            @test QuanticsGrids.origcoord_to_grididx(g, 1.999999 * dx + grid_min) == 3
+            @test QuanticsGrids.origcoord_to_grididx(g, grid_max - 1e-9 * dx - dx) == 2^R
             @test QuanticsGrids.grid_min(g) == 0.1
             @test QuanticsGrids.grid_max(g) == 2.0
             @test QuanticsGrids.grid_step(g) == 0.059375
@@ -167,9 +167,9 @@
             cs = [
                 0.999999 .* dx .+ grid_min,
                 1.999999 .* dx .+ grid_min,
-                grid_max .- 1e-9 .* dx,
+                grid_max .- 1e-9 .* dx .- dx,
             ]
-            refs = [1, 2, 2^R]
+            refs = [2, 3, 2^R]
 
             for (c, ref) in zip(cs, refs)
                 @inferred(QuanticsGrids.origcoord_to_grididx(g, c))
