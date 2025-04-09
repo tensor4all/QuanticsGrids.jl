@@ -1,14 +1,14 @@
 
 @testitem "grid.jl" begin
     using Test
-    import QuanticsGrids as QD
+    import QuanticsGrids
 
 
     @testset "quanticsfunction" begin
         R = 8
-        grid = QD.DiscretizedGrid{1}(R, 0.0, 1.0)
+        grid = QuanticsGrids.DiscretizedGrid{1}(R, 0.0, 1.0)
         fx(x) = exp(-x)
-        fq = QD.quanticsfunction(Float64, grid, fx)
+        fq = QuanticsGrids.quanticsfunction(Float64, grid, fx)
 
         @test fq(ones(Int, R)) == fx(0.0)
         @test fq(fill(2, R)) ≈ fx(1.0 - 1 / 2^R)
@@ -16,41 +16,41 @@
 
     @testset "1D grid (large R)" begin
         R = 62
-        grid = QD.DiscretizedGrid{1}(R, 0.0, 1.0)
-        @test QD.grididx_to_quantics(grid, 2^R) == fill(2, R)
+        grid = QuanticsGrids.DiscretizedGrid{1}(R, 0.0, 1.0)
+        @test QuanticsGrids.grididx_to_quantics(grid, 2^R) == fill(2, R)
     end
 
     @testset "2D grid (large R)" for base in [2]
         R = 62
         d = 2
-        grid = QD.DiscretizedGrid{d}(R, 0.0, 1.0; base=base)
-        @test QD.grididx_to_quantics(grid, ntuple(i -> base^R, d)) == fill(base^d, R)
+        grid = QuanticsGrids.DiscretizedGrid{d}(R, 0.0, 1.0; base=base)
+        @test QuanticsGrids.grididx_to_quantics(grid, ntuple(i -> base^R, d)) == fill(base^d, R)
     end
 
     @testset "1D grid (too large R)" begin
         R = 64
-        @test_throws ErrorException QD.DiscretizedGrid{1}(R, 0.0, 1.0)
+        @test_throws ErrorException QuanticsGrids.DiscretizedGrid{1}(R, 0.0, 1.0)
     end
 
     @testset "grid representation conversion" for R in [10]
         reprs = [:grididx, :quantics, :origcoord]
 
         testset = [
-            (QD.DiscretizedGrid{1}(R, 0.0, 1.0), 2),
-            (QD.DiscretizedGrid{2}(R, (0.0, 0.0), (1.0, 1.0)), (2, 3)),
-            (QD.InherentDiscreteGrid{1}(R), 2),
-            (QD.InherentDiscreteGrid{2}(R), (2, 3)),
+            (QuanticsGrids.DiscretizedGrid{1}(R, 0.0, 1.0), 2),
+            (QuanticsGrids.DiscretizedGrid{2}(R, (0.0, 0.0), (1.0, 1.0)), (2, 3)),
+            (QuanticsGrids.InherentDiscreteGrid{1}(R), 2),
+            (QuanticsGrids.InherentDiscreteGrid{2}(R), (2, 3)),
         ]
         for (grid, ini_grididx) in testset
 
             data = Dict{Symbol,Any}()
             transforms = Dict(
-                (:grididx, :quantics) => QD.grididx_to_quantics,
-                (:grididx, :origcoord) => QD.grididx_to_origcoord,
-                (:quantics, :grididx) => QD.quantics_to_grididx,
-                (:quantics, :origcoord) => QD.quantics_to_origcoord,
-                (:origcoord, :grididx) => QD.origcoord_to_grididx,
-                (:origcoord, :quantics) => QD.origcoord_to_quantics,
+                (:grididx, :quantics) => QuanticsGrids.grididx_to_quantics,
+                (:grididx, :origcoord) => QuanticsGrids.grididx_to_origcoord,
+                (:quantics, :grididx) => QuanticsGrids.quantics_to_grididx,
+                (:quantics, :origcoord) => QuanticsGrids.quantics_to_origcoord,
+                (:origcoord, :grididx) => QuanticsGrids.origcoord_to_grididx,
+                (:origcoord, :quantics) => QuanticsGrids.origcoord_to_quantics,
             )
 
             data[:grididx] = ini_grididx
@@ -181,7 +181,7 @@
             cs = [
                 0.999999 .* dx .+ a,
                 1.999999 .* dx .+ a,
-                b .- 1e-9 .* dx,
+                b .- dx .- 1e-9 .* dx,
             ]
             refs = [2, 3, 2^R]
 
