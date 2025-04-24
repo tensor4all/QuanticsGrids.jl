@@ -54,7 +54,7 @@ Conversion between grid index, original coordinate, quantics
 grid index => original coordinate
 """
 function grididx_to_origcoord(g::Grid{d}, index::NTuple{d,Int}) where {d}
-    all(1 .<= index .<= g.base^g.R) || error("1 <= {index} <= g.base^g.R")
+    all(1 .<= index .<= g.base^g.R) || error("1 <= $index <= g.base^g.R")
     return _convert_to_scalar_if_possible((index .- 1) .* grid_step(g) .+ grid_min(g))
 end
 
