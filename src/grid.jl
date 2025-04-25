@@ -165,6 +165,36 @@ struct InherentDiscreteGrid{d} <: Grid{d}
 
 end
 
+function InherentDiscreteGrid(
+    R::Int,
+    origin::Int;
+    base::Integer=2,
+    unfoldingscheme::Symbol=:fused,
+    step::Int=1,
+)
+    return InherentDiscreteGrid{1}(
+        R, origin;
+        base=base,
+        unfoldingscheme=unfoldingscheme,
+        step=step,
+    )
+end
+
+function InherentDiscreteGrid(
+    R::Int,
+    origin::NTuple{N, Int};
+    base::Integer=2,
+    unfoldingscheme::Symbol=:fused,
+    step::Union{Int, NTuple{N, Int}}=1,
+) where {N}
+    return InherentDiscreteGrid{N}(
+        R, origin;
+        base=base,
+        unfoldingscheme=unfoldingscheme,
+        step=step,
+    )
+end
+
 grid_min(grid::InherentDiscreteGrid) = _convert_to_scalar_if_possible(grid.origin)
 grid_step(grid::InherentDiscreteGrid{d}) where {d} =
     _convert_to_scalar_if_possible(grid.step)
@@ -249,6 +279,38 @@ struct DiscretizedGrid{d} <: Grid{d}
             includeendpoint,
         )
     end
+end
+
+function DiscretizedGrid(
+    R::Int,
+    grid_min::T,
+    grid_max::T;
+    base::Integer=2,
+    unfoldingscheme::Symbol=:fused,
+    includeendpoint::Bool=false,
+) where {T <: Real}
+    return DiscretizedGrid{1}(
+        R, (grid_min,), (grid_max,);
+        base=base,
+        unfoldingscheme=unfoldingscheme,
+        includeendpoint=includeendpoint,
+    )
+end
+
+function DiscretizedGrid(
+    R::Int,
+    grid_min::NTuple{N, T},
+    grid_max::NTuple{N, T};
+    base::Integer=2,
+    unfoldingscheme::Symbol=:fused,
+    includeendpoint::Bool=false,
+) where {N, T <: Real}
+    return DiscretizedGrid{N}(
+        R, grid_min, grid_max;
+        base=base,
+        unfoldingscheme=unfoldingscheme,
+        includeendpoint=includeendpoint,
+    )
 end
 
 grid_min(g::DiscretizedGrid) = _convert_to_scalar_if_possible(g.grid_min)
