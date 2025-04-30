@@ -1,4 +1,3 @@
-
 # Grid for d-dimensional space
 abstract type Grid{d} end
 
@@ -54,7 +53,7 @@ Conversion between grid index, original coordinate, quantics
 grid index => original coordinate
 """
 function grididx_to_origcoord(g::Grid{d}, index::NTuple{d,Int}) where {d}
-    all(1 .<= index .<= g.base^g.R) || error("1 <= {index} <= g.base^g.R")
+    all(1 .<= index .<= g.base^g.R) || error("1 <= $index <= g.base^g.R")
     return _convert_to_scalar_if_possible((index .- 1) .* grid_step(g) .+ grid_min(g))
 end
 
@@ -165,10 +164,73 @@ struct InherentDiscreteGrid{d} <: Grid{d}
 
 end
 
+function InherentDiscreteGrid(
+    R::Int,
+    origin::Int;
+    base::Integer=2,
+    unfoldingscheme::Symbol=:fused,
+    step::Int=1,
+)
+    return InherentDiscreteGrid{1}(
+        R, origin;
+        base=base,
+        unfoldingscheme=unfoldingscheme,
+        step=step,
+    )
+end
+
+function InherentDiscreteGrid(
+    R::Int,
+    origin::NTuple{N, Int};
+    base::Integer=2,
+    unfoldingscheme::Symbol=:fused,
+    step::Union{Int, NTuple{N, Int}}=1,
+) where {N}
+    return InherentDiscreteGrid{N}(
+        R, origin;
+        base=base,
+        unfoldingscheme=unfoldingscheme,
+        step=step,
+    )
+end
+
+"""
+    grid_min(g::InherentDiscreteGrid)
+
+Returns the grid point with minimal coordinate values.
+This is equivalent to [`grid_origin`](@ref).
+The return value is scalar for 1D grids, and a `Tuple` otherwise.
+"""
 grid_min(grid::InherentDiscreteGrid) = _convert_to_scalar_if_possible(grid.origin)
+
+
+"""
+    grid_max(g::InherentDiscreteGrid)
+
+Returns the grid point with maximal coordinate values.
+The return value is scalar for 1D grids, and a `Tuple` otherwise.
+"""
 grid_max(grid::InherentDiscreteGrid) = _convert_to_scalar_if_possible(grid.origin .+ grid_step(grid) .* (grid.base^grid.R .- 1))
+
+"""
+    grid_step(g::InherentDiscreteGrid)
+
+Returns the distance between adjacent grid points in each dimension.
+The return value is scalar for 1D grids, and a `Tuple` otherwise.
+"""
 grid_step(grid::InherentDiscreteGrid{d}) where {d} =
     _convert_to_scalar_if_possible(grid.step)
+
+
+
+"""
+    grid_origin(g::InherentDiscreteGrid)
+
+Returns the origin of the grid, as passed to the constructor during grid creation.
+The return value is scalar for 1D grids, and a `Tuple` otherwise.
+"""
+grid_origin(g::InherentDiscreteGrid) = _convert_to_scalar_if_possible(g.origin)
+
 
 """
 Create a grid for inherently discrete data with origin at 1
@@ -252,14 +314,58 @@ struct DiscretizedGrid{d} <: Grid{d}
     end
 end
 
+
+"""
+Create a discretized grid for a 1D space
+"""
+function DiscretizedGrid(
+    R::Int,
+    grid_min::T,
+    grid_max::T;
+    base::Integer=2,
+    unfoldingscheme::Symbol=:fused,
+    includeendpoint::Bool=false,
+) where {T <: Real}
+    return DiscretizedGrid{1}(
+        R, (grid_min,), (grid_max,);
+        base=base,
+        unfoldingscheme=unfoldingscheme,
+        includeendpoint=includeendpoint,
+    )
+end
+
+
+"""
+Create a discretized grid for a d-dimensional space
+"""
+function DiscretizedGrid(
+    R::Int,
+    grid_min::NTuple{d, T},
+    grid_max::NTuple{d, T};
+    base::Integer=2,
+    unfoldingscheme::Symbol=:fused,
+    includeendpoint::Bool=false,
+) where {d, T <: Real}
+    return DiscretizedGrid{d}(
+        R, grid_min, grid_max;
+        base=base,
+        unfoldingscheme=unfoldingscheme,
+        includeendpoint=includeendpoint,
+    )
+end
+
+
+
 """
     grid_min(g::DiscretizedGrid)
+
 
 Returns the grid point with minimal coordinate values.
 This is equivalent to [`lower_bound`](@ref).
 The return value is scalar for 1D grids, and a `Tuple` otherwise.
 """
 grid_min(g::DiscretizedGrid) = _convert_to_scalar_if_possible(g.lower_bound)
+
 
 """
     grid_max(g::DiscretizedGrid)
@@ -282,6 +388,7 @@ grid_step(g::DiscretizedGrid{d}) where {d} = _convert_to_scalar_if_possible(
     (g.upper_bound .- g.lower_bound) ./ (g.base^g.R .- 1) :
     (g.upper_bound .- g.lower_bound) ./ (g.base^g.R)
 )
+
 """
     upper_bound(g::DiscretizedGrid)
 
@@ -293,7 +400,7 @@ The return value is scalar for 1D grids, and a `Tuple` otherwise.
 upper_bound(g::DiscretizedGrid) = _convert_to_scalar_if_possible(g.upper_bound)
 
 """
-    grid_min(g::DiscretizedGrid)
+    lower_bound(g::DiscretizedGrid)
 
 Returns the grid point with minimal coordinate values, as passed to the constructor during grid creation.
 This is equivalent to [`grid_min`](@ref).

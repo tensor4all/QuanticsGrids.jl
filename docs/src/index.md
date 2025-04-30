@@ -16,7 +16,7 @@ julia> using Pkg; Pkg.add("QuanticsGrids.jl")
 
 ## Definition
 We first introduce a $B$-base presentation ($B=2, 3, 4, \cdots$).
-To avoid confusing, we will use the 1-based indexing of Julia below.
+To avoid confusion, we will use the 1-based indexing of Julia below.
 We represent a positive integer $X~(\ge 1)$ as
 
 ```math
@@ -64,13 +64,13 @@ with
 ```
 
 This convention is consistent with the column major used in Julia: At each digit level $i$, the bit for $x$ runs fastest.
-The fused representaion generalizes to any number of variables.
+The fused representation generalizes to any number of variables.
 
 
 ## Usage
 This package contains two main functionalities:
 
-1. Low-level functions for converting betwen linear and quantics representations
+1. Low-level functions for converting between linear and quantics representations
 2. High-level interface for creating a grid
 
 The normal users will use the second high-level interface.
@@ -92,8 +92,8 @@ grid = QG.DiscretizedGrid{1}(R, xmin, xmax)
 ```
 
 Here, `DiscretizedGrid` takes one parameter `1`, which denotes the dimension of the grid.
-There are six functions for translating between different reprenstations:
-`grididx` (1-based linear index), `quantics` and `origcoord` (original coordiate, i.e., $x$).
+There are six functions for translating between different representations:
+`grididx` (1-based linear index), `quantics` and `origcoord` (original coordinate, i.e., $x$).
 In `origcoord_to_quantics` and `origcoord_to_grididx`, if `origcoord` is out of the grid, the function returns the closest point in the grid.
 
 Example:
@@ -201,7 +201,7 @@ grididx = (2, 1, 1)
 
 ## Inherent discrete grid
 `InherentDiscreteGrid` can be used if the target space is discrete.
-`InherentDiscreteGrid`  has a very similar interface to `DiscretizedGrid`.
+`InherentDiscreteGrid` has a very similar interface to `DiscretizedGrid`.
 We provide one example.
 
 ```@example simple
@@ -255,7 +255,7 @@ grididx = base^R
 
 ## Create a function that takes a quantics index as its input
 When using `QuanticsGrids.jl` in combination with `TensorCrossInterpolation.jl`,
-one can wrap a function to be interpolated to make a fuction that takes a quantics index:
+one can wrap a function to be interpolated to make a function that takes a quantics index:
 
 ```@example simple
 import QuanticsGrids as QG

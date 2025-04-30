@@ -222,4 +222,36 @@
             end
         end
     end
+
+    @testset "dimension inference constructors" begin
+        g1 = QuanticsGrids.DiscretizedGrid(4, 0.0, 1.0)
+        g1_ref = QuanticsGrids.DiscretizedGrid{1}(4, 0.0, 1.0)
+        @test g1 isa QuanticsGrids.DiscretizedGrid{1}
+        @test QuanticsGrids.grid_min(g1) == QuanticsGrids.grid_min(g1_ref)
+        @test QuanticsGrids.grid_max(g1) == QuanticsGrids.grid_max(g1_ref)
+        @test QuanticsGrids.upper_bound(g1) == QuanticsGrids.upper_bound(g1_ref)
+
+        g2 = QuanticsGrids.DiscretizedGrid(4, (0.0, 0.0), (1.0, 1.0))
+        g2_ref = QuanticsGrids.DiscretizedGrid{2}(4, (0.0, 0.0), (1.0, 1.0))
+        @test g2 isa QuanticsGrids.DiscretizedGrid{2}
+        @test QuanticsGrids.grid_min(g2) == QuanticsGrids.grid_min(g2_ref)
+        @test QuanticsGrids.grid_max(g2) == QuanticsGrids.grid_max(g2_ref)
+        @test QuanticsGrids.upper_bound(g2) == QuanticsGrids.upper_bound(g2_ref)
+
+        g6 = QuanticsGrids.DiscretizedGrid(6, (0.0, 0.0, 0.0, 0.0, 0.0, 0.0), (1.0, 1.0, 1.0, 1.0, 1.0, 1.0))
+        g6_ref = QuanticsGrids.DiscretizedGrid{6}(6, (0.0, 0.0, 0.0, 0.0, 0.0, 0.0), (1.0, 1.0, 1.0, 1.0, 1.0, 1.0))
+        @test g6 isa QuanticsGrids.DiscretizedGrid{6}
+        @test QuanticsGrids.grid_min(g6) == QuanticsGrids.grid_min(g6_ref)
+        @test QuanticsGrids.grid_max(g6) == QuanticsGrids.grid_max(g6_ref)
+        @test QuanticsGrids.upper_bound(g6) == QuanticsGrids.upper_bound(g6_ref)
+
+        g3 = QuanticsGrids.InherentDiscreteGrid(4, 1)
+        @test g3 isa QuanticsGrids.InherentDiscreteGrid{1}
+        @test QuanticsGrids.grid_origin(g3) == 1
+
+        g4 = QuanticsGrids.InherentDiscreteGrid(4, (1, 2, 3); step=(1, 2, 1))
+        @test g4 isa QuanticsGrids.InherentDiscreteGrid{3}
+        @test QuanticsGrids.grid_origin(g4) == (1, 2, 3)
+        @test QuanticsGrids.grid_step(g4) == (1, 2, 1)
+    end
 end

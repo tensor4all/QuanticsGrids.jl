@@ -115,7 +115,7 @@ function fused_to_interleaved(
 end
 
 """
-Convert a unfused quantics representation to an fused quantics representation
+Convert an unfused quantics representation to an fused quantics representation
 """
 function interleaved_to_fused(
     digitlist::AbstractVector{T};
