@@ -7,11 +7,7 @@ function peierls(B::Real, i::HoneycombSite, j::HoneycombSite)
 end
 
 function rashba(distance::Vector{Float64})
-    pauli = [
-        [0. 1.; 1. 0.],
-        [0. -1.0im; 1.0im 0.],
-        [1. 0.; 0. -1.]
-    ]
+    pauli = [[0.0 1.0; 1.0 0.0], [0.0 -1.0im; 1.0im 0.0], [1.0 0.0; 0.0 -1.0]]
 
     return pauli[1] .* distance[2] .- pauli[2] .* distance[1]
 end
@@ -20,8 +16,8 @@ function get_Ht(
     q::Integer,
     k::Vector{Float64},
     lattice::TCI.IndexSet{HoneycombSite};
-    mass::Float64=0.0,
-    derivative_direction::Union{Nothing,Int}=nothing
+    mass::Float64 = 0.0,
+    derivative_direction::Union{Nothing,Int} = nothing,
 )
     B = 4pi / sqrt(3) / q
     Ht = zeros(ComplexF64, 4q, 2, 4q, 2)
@@ -51,7 +47,7 @@ function get_HR(
     q::Integer,
     k::Vector{Float64},
     lattice::TCI.IndexSet{HoneycombSite};
-    derivative_direction::Union{Nothing,Int}=nothing
+    derivative_direction::Union{Nothing,Int} = nothing,
 )
     @assert isnothing(derivative_direction)
 
@@ -75,7 +71,7 @@ function get_Hlambda(
     q::Integer,
     k::Vector{Float64},
     lattice::TCI.IndexSet{HoneycombSite};
-    derivative_direction::Union{Nothing,Int}=nothing
+    derivative_direction::Union{Nothing,Int} = nothing,
 )
     B = 4pi / sqrt(3) / q
     Hlambda = zeros(ComplexF64, 4q, 2, 4q, 2)
@@ -106,10 +102,10 @@ function get_H(
     lambda_R::Float64,
     k::Vector{Float64},
     lattice::TCI.IndexSet{HoneycombSite};
-    mass::Float64=0.0,
-    derivative_direction::Union{Nothing,Int}=nothing
+    mass::Float64 = 0.0,
+    derivative_direction::Union{Nothing,Int} = nothing,
 )
     return get_Ht(q, k, lattice; mass, derivative_direction) .+
-        lambda_SO .* get_Hlambda(q, k, lattice; derivative_direction) .+
-        lambda_R .* get_HR(q, k, lattice)
+           lambda_SO .* get_Hlambda(q, k, lattice; derivative_direction) .+
+           lambda_R .* get_HR(q, k, lattice)
 end
