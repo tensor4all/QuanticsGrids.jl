@@ -17,7 +17,7 @@ function Base.isequal(l::HoneycombSite, r::HoneycombSite)
 end
 
 function Base.hash(s::HoneycombSite, h::UInt)
-    return foldr(hash, [s.R, s.c, :HoneycombSite]; init=h)
+    return foldr(hash, [s.R, s.c, :HoneycombSite]; init = h)
 end
 
 function realspacecoordinates(s::HoneycombSite)
@@ -32,13 +32,13 @@ function neighbours(s::HoneycombSite)
         return [
             HoneycombSite(s.R, 2),
             HoneycombSite(s.R + [-1, 0], 2),
-            HoneycombSite(s.R + [-1, 1], 2)
+            HoneycombSite(s.R + [-1, 1], 2),
         ]
     else
         return [
             HoneycombSite(s.R, 1),
             HoneycombSite(s.R + [1, 0], 1),
-            HoneycombSite(s.R + [1, -1], 1)
+            HoneycombSite(s.R + [1, -1], 1),
         ]
     end
 end
@@ -50,20 +50,17 @@ function nextneighbours(s::HoneycombSite)
         HoneycombSite(s.R + [-1, 0], s.c),
         HoneycombSite(s.R + [-1, 1], s.c),
         HoneycombSite(s.R + [0, 1], s.c),
-        HoneycombSite(s.R + [0, -1], s.c)
+        HoneycombSite(s.R + [0, -1], s.c),
     ]
 end
 
 function reducesite(s::HoneycombSite, Lx::Int, Ly::Int)
     xnew = mod(s.R[1], 2 * Lx)
-    return HoneycombSite(
-        [xnew, mod(s.R[2] - div(xnew - s.R[1], 2), Ly)],
-        s.c
-    )
+    return HoneycombSite([xnew, mod(s.R[2] - div(xnew - s.R[1], 2), Ly)], s.c)
 end
 
 function honeycomblattice(xmin::Integer, xmax::Integer, ymin::Integer, ymax::Integer)
     return TCI.IndexSet(
-        [HoneycombSite([x, y], c) for c in 1:2, x in xmin:xmax, y in ymin:ymax][:]
+        [HoneycombSite([x, y], c) for c = 1:2, x = xmin:xmax, y = ymin:ymax][:],
     )
 end

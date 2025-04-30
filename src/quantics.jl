@@ -12,15 +12,15 @@ scale (see QTCI paper).
 
 Inverse of [`unfuse_dimensions`](@ref).
 """
-function fuse_dimensions(digitlists...; base::Integer=2)
+function fuse_dimensions(digitlists...; base::Integer = 2)
     _checkdigits.(base, digitlists)
     result = ones(Int, length(digitlists[1]))
-    return fuse_dimensions!(result, digitlists...; base=base)
+    return fuse_dimensions!(result, digitlists...; base = base)
 end
 
 
 
-function fuse_dimensions!(fused::AbstractArray{<:Integer}, digitlists...; base::Integer=2)
+function fuse_dimensions!(fused::AbstractArray{<:Integer}, digitlists...; base::Integer = 2)
     p = 1
     fused .= 1
     for d in eachindex(digitlists)
@@ -37,18 +37,18 @@ end
 Unfuse up a fused digitlist with bits of dimension base^d into d digitlists where each bit has dimension `base`.
 Inverse of [`fuse_dimensions`](@ref).
 """
-function unfuse_dimensions(digitlist, d; base::Integer=2)
+function unfuse_dimensions(digitlist, d; base::Integer = 2)
     result = [zeros(Int, length(digitlist)) for _ = 1:d]
-    return unfuse_dimensions!(result, digitlist; base=base)
+    return unfuse_dimensions!(result, digitlist; base = base)
 end
 
-function unfuse_dimensions!(digitlists, digitlist; base::Integer=2)
+function unfuse_dimensions!(digitlists, digitlist; base::Integer = 2)
     ndim = length(digitlists)
     R = length(digitlist)
     for i = 1:ndim
         for j = 1:R
             digitlists[i][j] =
-                _digit_at_index(digitlist[j], ndim - i + 1; numdigits=ndim, base=base)
+                _digit_at_index(digitlist[j], ndim - i + 1; numdigits = ndim, base = base)
         end
     end
     return digitlists
@@ -109,9 +109,9 @@ Convert a fused quantics representation to an unfused quantics representation
 function fused_to_interleaved(
     digitlist::AbstractVector{T},
     d;
-    base=2,
+    base = 2,
 )::Vector{T} where {T<:Integer}
-    return interleave_dimensions(unfuse_dimensions(digitlist, d; base=base)...)
+    return interleave_dimensions(unfuse_dimensions(digitlist, d; base = base)...)
 end
 
 """
@@ -119,8 +119,8 @@ Convert an unfused quantics representation to an fused quantics representation
 """
 function interleaved_to_fused(
     digitlist::AbstractVector{T};
-    base::Integer=2,
-    d::Int=1,
+    base::Integer = 2,
+    d::Int = 1,
 )::Vector{T} where {T<:Integer}
     fused_digitlist = Vector{T}(undef, length(digitlist) ÷ d)
     fuse_dimensions!(fused_digitlist, deinterleave_dimensions(digitlist, d)...)
@@ -143,8 +143,8 @@ See also [`quantics_to_index`](https://tensors4fields.gitlab.io/quanticstci.jl/d
 """
 function quantics_to_index_fused(
     digitlist::AbstractVector{<:Integer};
-    base::Integer=2,
-    dims::Val{d}=Val(1),
+    base::Integer = 2,
+    dims::Val{d} = Val(1),
 )::NTuple{d,Int} where {d}
     R = length(digitlist)
     result = ones(MVector{d,Int})
@@ -181,17 +181,17 @@ Convert a d-dimensional index from fused quantics representation to d Integers.
 """
 function quantics_to_index(
     digitlist::AbstractVector{<:Integer};
-    base::Integer=2,
-    dims::Val{d}=Val(1),
-    unfoldingscheme::Symbol=:fused,
+    base::Integer = 2,
+    dims::Val{d} = Val(1),
+    unfoldingscheme::Symbol = :fused,
 )::NTuple{d,Int} where {d}
     if unfoldingscheme === :fused
-        return quantics_to_index_fused(digitlist, base=base, dims=dims)
+        return quantics_to_index_fused(digitlist, base = base, dims = dims)
     else
         return quantics_to_index_fused(
-            interleaved_to_fused(digitlist; base=base, d=d),
-            base=base,
-            dims=dims,
+            interleaved_to_fused(digitlist; base = base, d = d),
+            base = base,
+            dims = dims,
         )
     end
 end
@@ -203,7 +203,7 @@ end
 * `digitlist`     base-b representation (1d vector)
 * `base`           base for quantics (default: 2)
 """
-function index_to_quantics!(digitlist, index::Integer; base::Integer=2)
+function index_to_quantics!(digitlist, index::Integer; base::Integer = 2)
     numdigits = length(digitlist)
     for i = 1:numdigits
         digitlist[i] = mod(index - 1, base^(numdigits - i + 1)) ÷ base^(numdigits - i) + 1
@@ -216,9 +216,9 @@ end
 
 Does the same as [`index_to_quantics!`](@ref) but returns a new vector.
 """
-function index_to_quantics(index::Integer; numdigits=8, base::Integer=2)
+function index_to_quantics(index::Integer; numdigits = 8, base::Integer = 2)
     digitlist = Vector{Int}(undef, numdigits)
-    return index_to_quantics!(digitlist, index; base=base)
+    return index_to_quantics!(digitlist, index; base = base)
 end
 
 """
@@ -229,7 +229,7 @@ Does the opposite of [`quantics_to_index_fused`](@ref)
 function index_to_quantics_fused!(
     digitlist::AbstractVector{<:Integer},
     index::NTuple{D,<:Integer};
-    base::Integer=2,
+    base::Integer = 2,
 ) where {D}
     R = length(digitlist)
     ndims = length(index)
@@ -238,7 +238,7 @@ function index_to_quantics_fused!(
         for i = 1:R # from the left to right
             digitlist[i] +=
                 (base^(dim - 1)) *
-                (_digit_at_index(index[dim], i; numdigits=R, base=base) - 1)
+                (_digit_at_index(index[dim], i; numdigits = R, base = base) - 1)
         end
     end
     return digitlist
@@ -246,11 +246,11 @@ end
 
 function index_to_quantics_fused(
     index::NTuple{D,<:Integer};
-    numdigits::Integer=8,
-    base::Integer=2,
+    numdigits::Integer = 8,
+    base::Integer = 2,
 ) where {D}
     digitlist = Vector{Int}(undef, numdigits)
-    return index_to_quantics_fused!(digitlist, index; base=base)
+    return index_to_quantics_fused!(digitlist, index; base = base)
 end
 
 
@@ -262,7 +262,7 @@ end
 `position=1`: Specify the position of the digit to look at. 1 is the most significant (most left) digit.
 `numdigits=8`: Specify the number of digits in the number `index`.
 """
-function _digit_at_index(index, position; numdigits=8, base::Integer=2)
+function _digit_at_index(index, position; numdigits = 8, base::Integer = 2)
     p_ = numdigits - position + 1
     return mod((index - 1), base^p_) ÷ base^(p_ - 1) + 1
 end

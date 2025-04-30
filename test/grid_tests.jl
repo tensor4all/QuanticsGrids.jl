@@ -23,8 +23,9 @@
     @testset "2D grid (large R)" for base in [2]
         R = 62
         d = 2
-        grid = QuanticsGrids.DiscretizedGrid{d}(R, 0.0, 1.0; base=base)
-        @test QuanticsGrids.grididx_to_quantics(grid, ntuple(i -> base^R, d)) == fill(base^d, R)
+        grid = QuanticsGrids.DiscretizedGrid{d}(R, 0.0, 1.0; base = base)
+        @test QuanticsGrids.grididx_to_quantics(grid, ntuple(i -> base^R, d)) ==
+              fill(base^d, R)
     end
 
     @testset "1D grid (too large R)" begin
@@ -82,7 +83,7 @@
         step in [(1, 1, 1), (1, 1, 2)],
         origin in [(1, 1, 1), (1, 1, 2)]
 
-        m = QuanticsGrids.InherentDiscreteGrid{3}(5, origin; unfoldingscheme, step=step)
+        m = QuanticsGrids.InherentDiscreteGrid{3}(5, origin; unfoldingscheme, step = step)
         @test QuanticsGrids.grid_min(m) == origin
         @test QuanticsGrids.grid_step(m) == step
 
@@ -118,11 +119,12 @@
             g = QuanticsGrids.DiscretizedGrid{1}(R, a, b; unfoldingscheme)
             @test QuanticsGrids.localdimensions(g) == fill(2, R)
 
-            @test @inferred(
-                QuanticsGrids.origcoord_to_grididx(g, 0.999999 * dx + a)
-            ) == 2
+            @test @inferred(QuanticsGrids.origcoord_to_grididx(g, 0.999999 * dx + a)) == 2
             @test QuanticsGrids.origcoord_to_grididx(g, 1.999999 * dx + a) == 3
-            @test QuanticsGrids.origcoord_to_grididx(g, QuanticsGrids.grid_max(g) + 1e-9 * dx) == 2^R
+            @test QuanticsGrids.origcoord_to_grididx(
+                g,
+                QuanticsGrids.grid_max(g) + 1e-9 * dx,
+            ) == 2^R
 
             @test QuanticsGrids.lower_bound(g) == 0.1
             @test QuanticsGrids.upper_bound(g) == 2.0
@@ -142,7 +144,7 @@
                 a,
                 b;
                 unfoldingscheme,
-                includeendpoint=true,
+                includeendpoint = true,
             )
             @test QuanticsGrids.localdimensions(g) == fill(2, R)
 
@@ -178,11 +180,7 @@
             @test QuanticsGrids.grid_min(g) == a
             @test QuanticsGrids.grid_max(g) == b .- dx
 
-            cs = [
-                0.999999 .* dx .+ a,
-                1.999999 .* dx .+ a,
-                b .- dx .- 1e-9 .* dx,
-            ]
+            cs = [0.999999 .* dx .+ a, 1.999999 .* dx .+ a, b .- dx .- 1e-9 .* dx]
             refs = [2, 3, 2^R]
 
             for (c, ref) in zip(cs, refs)
@@ -210,7 +208,7 @@
                 a,
                 b;
                 unfoldingscheme,
-                includeendpoint=true,
+                includeendpoint = true,
             )
             @test g.includeendpoint
             @test QuanticsGrids.grid_step(g) == dx
@@ -238,8 +236,16 @@
         @test QuanticsGrids.grid_max(g2) == QuanticsGrids.grid_max(g2_ref)
         @test QuanticsGrids.upper_bound(g2) == QuanticsGrids.upper_bound(g2_ref)
 
-        g6 = QuanticsGrids.DiscretizedGrid(6, (0.0, 0.0, 0.0, 0.0, 0.0, 0.0), (1.0, 1.0, 1.0, 1.0, 1.0, 1.0))
-        g6_ref = QuanticsGrids.DiscretizedGrid{6}(6, (0.0, 0.0, 0.0, 0.0, 0.0, 0.0), (1.0, 1.0, 1.0, 1.0, 1.0, 1.0))
+        g6 = QuanticsGrids.DiscretizedGrid(
+            6,
+            (0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+            (1.0, 1.0, 1.0, 1.0, 1.0, 1.0),
+        )
+        g6_ref = QuanticsGrids.DiscretizedGrid{6}(
+            6,
+            (0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+            (1.0, 1.0, 1.0, 1.0, 1.0, 1.0),
+        )
         @test g6 isa QuanticsGrids.DiscretizedGrid{6}
         @test QuanticsGrids.grid_min(g6) == QuanticsGrids.grid_min(g6_ref)
         @test QuanticsGrids.grid_max(g6) == QuanticsGrids.grid_max(g6_ref)
@@ -249,7 +255,7 @@
         @test g3 isa QuanticsGrids.InherentDiscreteGrid{1}
         @test QuanticsGrids.grid_origin(g3) == 1
 
-        g4 = QuanticsGrids.InherentDiscreteGrid(4, (1, 2, 3); step=(1, 2, 1))
+        g4 = QuanticsGrids.InherentDiscreteGrid(4, (1, 2, 3); step = (1, 2, 1))
         @test g4 isa QuanticsGrids.InherentDiscreteGrid{3}
         @test QuanticsGrids.grid_origin(g4) == (1, 2, 3)
         @test QuanticsGrids.grid_step(g4) == (1, 2, 1)
