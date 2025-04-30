@@ -11,7 +11,7 @@ This library provides utilities for interpolations of functions in the quantics 
 The following will install QuanticsGrids.jl:
 
 ```julia
-julia> using Pkg; Pkg.add("QuanticsGrids.jl")
+julia> using Pkg; Pkg.add("QuanticsGrids")
 ```
 
 ## Definition
