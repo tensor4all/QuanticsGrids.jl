@@ -207,4 +207,30 @@
             end
         end
     end
+
+    @testset "dimension inference constructors" begin
+        g1 = QD.DiscretizedGrid(4, 0.0, 1.0)
+        @test g1 isa QD.DiscretizedGrid{1}
+        @test g1.grid_min == (0.0,)
+        @test g1.grid_max == (1.0,)
+
+        g2 = QD.DiscretizedGrid(4, (0.0, 0.0), (1.0, 1.0))
+        @test g2 isa QD.DiscretizedGrid{2}
+        @test g2.grid_min == (0.0, 0.0)
+        @test g2.grid_max == (1.0, 1.0)
+
+        g6 = QD.DiscretizedGrid(6, (0.0, 0.0, 0.0, 0.0, 0.0, 0.0), (1.0, 1.0, 1.0, 1.0, 1.0, 1.0))
+        @test g6 isa QD.DiscretizedGrid{6}
+        @test g6.grid_min == (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+        @test g6.grid_max == (1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
+
+        g3 = QD.InherentDiscreteGrid(4, 1)
+        @test g3 isa QD.InherentDiscreteGrid{1}
+        @test g3.origin == (1,)
+
+        g4 = QD.InherentDiscreteGrid(4, (1, 2, 3); step=(1, 2, 1))
+        @test g4 isa QD.InherentDiscreteGrid{3}
+        @test g4.origin == (1, 2, 3)
+        @test g4.step == (1, 2, 1)
+    end
 end
