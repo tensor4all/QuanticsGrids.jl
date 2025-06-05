@@ -136,32 +136,46 @@ function quantics_to_grididx(g::NewDiscretizedGrid{D}, quantics) where D
     @assert all(site -> quantics[site] ∈ 1:sitedim(g, site), eachindex(quantics))
 
     base = g.base
-    result = ntuple(D) do d
-        grididx::Int = 1
-        R_d = g.Rs[d]
 
-        # Process each bitnumber for this dimension
-        for bitnumber in 1:R_d
-            # Look up site and position using precomputed lookup table
-            site_idx, pos_in_site = g.lookup_table[d][bitnumber]
-            quantics_val = quantics[site_idx]
-            site_len = length(g.indextable[site_idx])
+    result = if base == 2
+        _quantics_to_grididx_base2(g, quantics)
+    else
+        ntuple(D) do d
+            grididx = 1
+            R_d = g.Rs[d]
 
-            # Extract the digit at this position without allocation
-            # Convert 1-based quantics value to 0-based, then extract digit
-            temp = quantics_val - 1
-            for _ in 1:(site_len-pos_in_site)
-                temp = div(temp, base)
+            for bitnumber in 1:R_d
+                site_idx, pos_in_site = g.lookup_table[d][bitnumber]
+                quantics_val = quantics[site_idx]
+                site_len = length(g.indextable[site_idx])
+
+                temp = quantics_val - 1
+                for _ in 1:(site_len-pos_in_site)
+                    temp = div(temp, base)
+                end
+                digit = temp % base
+
+                grididx += digit * base^(R_d - bitnumber)
             end
-            digit = temp % base
-
-            # Add contribution to grid index
-            grididx += digit * base^(R_d - bitnumber)
-            # end
+            grididx
         end
-        grididx
     end
     _convert_to_scalar_if_possible(result)
+end
+
+function _quantics_to_grididx_base2(g::NewDiscretizedGrid{D}, quantics) where D
+    ntuple(D) do d
+        grididx = 0
+        R_d = g.Rs[d]
+
+        for bitnumber in 1:R_d
+            site_idx, pos_in_site = g.lookup_table[d][bitnumber]
+            bit_position = length(g.indextable[site_idx]) - pos_in_site
+            digit = (quantics[site_idx] - 1) >> bit_position & 1
+            grididx |= digit << (R_d - bitnumber)
+        end
+        grididx + 1  # Convert back to 1-based indexing
+    end
 end
 
 """
@@ -177,6 +191,32 @@ function grididx_to_quantics(g::NewDiscretizedGrid{D}, grididx::NTuple{D,Int}) w
 
     result = ones(Int, length(g.indextable))
 
+    if base == 2
+        _grididx_to_quantics_base2!(result, g, grididx)
+    else
+        @inbounds for d in 1:D
+            zero_based_idx = grididx[d] - 1
+            R_d = g.Rs[d]
+
+            for bitnumber in 1:R_d
+                site_idx, pos_in_site = g.lookup_table[d][bitnumber]
+                site_length = length(g.indextable[site_idx])
+
+                bit_position = R_d - bitnumber
+                digit = (zero_based_idx ÷ (base^bit_position)) % base
+
+                power = site_length - pos_in_site
+                result[site_idx] += digit * (base^power)
+            end
+        end
+    end
+
+    return result
+end
+
+grididx_to_quantics(g::NewDiscretizedGrid{1}, grididx::Int) = grididx_to_quantics(g, (grididx,))
+
+function _grididx_to_quantics_base2!(result::Vector{Int}, g::NewDiscretizedGrid{D}, grididx::NTuple{D,Int}) where D
     @inbounds for d in 1:D
         zero_based_idx = grididx[d] - 1
         R_d = g.Rs[d]
@@ -186,17 +226,13 @@ function grididx_to_quantics(g::NewDiscretizedGrid{D}, grididx::NTuple{D,Int}) w
             site_length = length(g.indextable[site_idx])
 
             bit_position = R_d - bitnumber
-            digit = (zero_based_idx ÷ (base^bit_position)) % base
+            digit = (zero_based_idx >> bit_position) & 1
 
             power = site_length - pos_in_site
-            result[site_idx] += digit * (base^power)
+            result[site_idx] += digit << power
         end
     end
-
-    return result
 end
-
-grididx_to_quantics(g::NewDiscretizedGrid{1}, grididx::Int) = grididx_to_quantics(g, (grididx,))
 
 """
     grid_min(g::NewDiscretizedGrid)
