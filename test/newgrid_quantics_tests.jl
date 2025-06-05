@@ -1,0 +1,238 @@
+@testitem "constructor, square grid" begin
+    grid = QuanticsGrids.NewDiscretizedGrid{2}(10)
+    @test grid.Rs == (10, 10)
+    @test only(grid.indextable[1]).variablename == Symbol(1)
+    @test only(grid.indextable[1]).bitnumber == 1
+    @test only(grid.indextable[2]).variablename == Symbol(2)
+    @test only(grid.indextable[2]).bitnumber == 1
+end
+
+@testitem "constructor, rectangular grid" begin
+    grid = QuanticsGrids.NewDiscretizedGrid((3, 5))
+    @test only(grid.indextable[6]).variablename == Symbol(2)
+    @test only(grid.indextable[6]).bitnumber == 3
+    @test only(grid.indextable[7]).variablename == Symbol(2)
+    @test only(grid.indextable[7]).bitnumber == 4
+    @test only(grid.indextable[8]).variablename == Symbol(2)
+    @test only(grid.indextable[8]).bitnumber == 5
+end
+
+@testitem "quantics_to_grididx, rectangular grid" begin
+    grid = QuanticsGrids.NewDiscretizedGrid((3, 5))
+    @test QuanticsGrids.quantics_to_grididx(grid, [1, 2, 1, 2, 1, 2, 1, 2]) == (1, 30)
+end
+
+@testitem "grididx_to_quantics, rectangular grid" begin
+    grid = QuanticsGrids.NewDiscretizedGrid((3, 5))
+    @test QuanticsGrids.grididx_to_quantics(grid, (1, 30)) == [1, 2, 1, 2, 1, 2, 1, 2]
+end
+
+@testitem "quantics_to_grididx ∘ grididx_to_quantics == identity" begin
+    grid = QuanticsGrids.NewDiscretizedGrid((5, 3, 17); base=13)
+    for _ in 1:100
+        grididx = ntuple(d -> rand(1:grid.Rs[d]), ndims(grid))
+        @test QuanticsGrids.quantics_to_grididx(grid, QuanticsGrids.grididx_to_quantics(grid, grididx)) == grididx
+    end
+end
+
+@testitem "grididx_to_quantics ∘ quantics_to_grididx == identity" begin
+    grid = QuanticsGrids.NewDiscretizedGrid((48, 31, 62))
+    for _ in 1:100
+        quantics = rand(1:2, length(grid))
+        @test QuanticsGrids.grididx_to_quantics(grid, QuanticsGrids.quantics_to_grididx(grid, quantics)) == quantics
+    end
+end
+
+@testitem "grididx_to_quantics ∘ quantics_to_grididx == identity, base != 2" begin
+    base = 7
+    grid = QuanticsGrids.NewDiscretizedGrid((22, 9, 14); base)
+    for _ in 1:100
+        quantics = rand(1:base, length(grid))
+        @test QuanticsGrids.grididx_to_quantics(grid, QuanticsGrids.quantics_to_grididx(grid, quantics)) == quantics
+    end
+end
+
+@testitem "ctor from indextable" begin
+    grid = QuanticsGrids.NewDiscretizedGrid((:a, :b, :c), [[(:a, 4)], [(:a, 3)], [(:a, 2)], [(:a, 1)], [(:b, 1)], [(:b, 2)], [(:b, 3)], [(:c, 1)], [(:c, 2)], [(:c, 3)]])
+    @test grid.Rs == (4, 3, 3)
+    @test grid.lower_bound == (0.0, 0.0, 0.0)
+    @test grid.upper_bound == (1.0, 1.0, 1.0)
+    @test grid.variablenames == (:a, :b, :c)
+end
+
+@testitem "ctor from indextable, quantics <-> grididx" begin
+    grid = QuanticsGrids.NewDiscretizedGrid((:a, :b, :c), [[(:a, 4)], [(:a, 3)], [(:a, 2)], [(:a, 1)], [(:b, 1)], [(:b, 2)], [(:b, 3)], [(:c, 1)], [(:c, 2)], [(:c, 3)]])
+    @test QuanticsGrids.quantics_to_grididx(grid, [1, 2, 1, 2, 1, 2, 1, 2, 1, 2]) == (11, 3, 6)
+    @test QuanticsGrids.grididx_to_quantics(grid, (11, 3, 6)) == [1, 2, 1, 2, 1, 2, 1, 2, 1, 2]
+end
+
+@testitem "ctor from indextable, quantics <-> grididx, fused indices" begin
+    grid = QuanticsGrids.NewDiscretizedGrid((:a, :b, :c, :d), [[(:a, 4)], [(:a, 3)], [(:a, 2)], [(:a, 1)], [(:b, 1), (:d, 1)], [(:b, 2)], [(:b, 3)], [(:c, 1), (:d, 2)], [(:c, 2)], [(:c, 3)]])
+    @test QuanticsGrids.quantics_to_grididx(grid, [1, 2, 1, 2, 2, 2, 1, 4, 1, 2]) == (11, 3, 6, 4)
+    @test QuanticsGrids.grididx_to_quantics(grid, (11, 3, 6, 4)) == [1, 2, 1, 2, 2, 2, 1, 4, 1, 2]
+end
+
+@testitem "challenging tests - extreme edge cases" begin
+    # Test with minimum valid grididx (all 1s)
+    grid = QuanticsGrids.NewDiscretizedGrid((10, 5, 8))
+    min_grididx = (1, 1, 1)
+    quantics = QuanticsGrids.grididx_to_quantics(grid, min_grididx)
+    @test all(q -> q == 1, quantics)
+    @test QuanticsGrids.quantics_to_grididx(grid, quantics) == min_grididx
+
+    # Test with maximum valid grididx
+    max_grididx = (2^10, 2^5, 2^8)
+    quantics = QuanticsGrids.grididx_to_quantics(grid, max_grididx)
+    @test all(q -> q == 2, quantics)
+    @test QuanticsGrids.quantics_to_grididx(grid, quantics) == max_grididx
+end
+
+@testitem "challenging tests - mixed bases" begin
+    # Test with base 3
+    grid = QuanticsGrids.NewDiscretizedGrid((4, 6, 3); base=3)
+    for _ in 1:50
+        quantics = rand(1:3, length(grid))
+        grididx = QuanticsGrids.quantics_to_grididx(grid, quantics)
+        @test QuanticsGrids.grididx_to_quantics(grid, grididx) == quantics
+        @test all(1 .<= grididx .<= (3 .^ grid.Rs))
+    end
+
+    # Test with base 5
+    grid = QuanticsGrids.NewDiscretizedGrid((3, 4); base=5)
+    for _ in 1:50
+        grididx = (rand(1:5^3), rand(1:5^4))
+        quantics = QuanticsGrids.grididx_to_quantics(grid, grididx)
+        @test QuanticsGrids.quantics_to_grididx(grid, quantics) == grididx
+        @test all(1 .<= quantics .<= 5)
+    end
+end
+
+@testitem "challenging tests - complex fused indices" begin
+    # Multiple variables fused in single sites
+    grid = QuanticsGrids.NewDiscretizedGrid(
+        (:x, :y, :z),
+        [
+            [(:x, 3), (:y, 2), (:z, 1)],  # 3 variables in one site
+            [(:x, 2)],                     # single variable
+            [(:y, 1), (:z, 2)],          # 2 variables fused
+            [(:x, 1)],                     # single variable
+            [(:z, 3)]                      # single variable
+        ]
+    )
+
+    # Test specific known values
+    @test QuanticsGrids.quantics_to_grididx(grid, [8, 1, 4, 2, 1]) == (6, 4, 7)
+    @test QuanticsGrids.grididx_to_quantics(grid, (6, 4, 7)) == [8, 1, 4, 2, 1]
+
+    # Test random values
+    for _ in 1:100
+        quantics = [
+            rand(1:8),   # site 1: base^3 = 8 possibilities
+            rand(1:2),   # site 2: base = 2 possibilities  
+            rand(1:4),   # site 3: base^2 = 4 possibilities
+            rand(1:2),   # site 4: base = 2 possibilities
+            rand(1:2)    # site 5: base = 2 possibilities
+        ]
+        grididx = QuanticsGrids.quantics_to_grididx(grid, quantics)
+        @test QuanticsGrids.grididx_to_quantics(grid, grididx) == quantics
+    end
+end
+
+@testitem "challenging tests - asymmetric grids" begin
+    # Very asymmetric grid dimensions
+    grid = QuanticsGrids.NewDiscretizedGrid((20, 0, 15, 3))
+
+    for _ in 1:50
+        # Test boundary conditions
+        quantics = rand(1:2, length(grid))
+        grididx = QuanticsGrids.quantics_to_grididx(grid, quantics)
+        @test QuanticsGrids.grididx_to_quantics(grid, grididx) == quantics
+
+        # Verify grid index bounds
+        @test 1 <= grididx[1] <= 2^20
+        @test grididx[2] == 1  # R=0 means only one possible value
+        @test 1 <= grididx[3] <= 2^15
+        @test 1 <= grididx[4] <= 2^3
+    end
+end
+
+@testitem "challenging tests - single dimension edge cases" begin
+    # 1D grid with large R
+    grid = QuanticsGrids.NewDiscretizedGrid((25,))
+
+    # Test extremes
+    min_quantics = ones(Int, 25)
+    max_quantics = fill(2, 25)
+
+    @test QuanticsGrids.quantics_to_grididx(grid, min_quantics) == 1
+    @test QuanticsGrids.quantics_to_grididx(grid, max_quantics) == 2^25
+    @test QuanticsGrids.grididx_to_quantics(grid, (1,)) == min_quantics
+    @test QuanticsGrids.grididx_to_quantics(grid, (2^25,)) == max_quantics
+
+    # Test middle values
+    for _ in 1:20
+        quantics = rand(1:2, 25)
+        grididx = QuanticsGrids.quantics_to_grididx(grid, quantics)
+        @test QuanticsGrids.grididx_to_quantics(grid, grididx) == quantics
+    end
+end
+
+@testitem "challenging tests - high dimensional grids" begin
+    # 8D grid with moderate R values
+    grid = QuanticsGrids.NewDiscretizedGrid(ntuple(i -> 4 + (i % 3), 8); base=3)
+
+    for _ in 1:30
+        quantics = rand(1:3, length(grid))
+        grididx = QuanticsGrids.quantics_to_grididx(grid, quantics)
+        @test QuanticsGrids.grididx_to_quantics(grid, grididx) == quantics
+
+        # Verify all grid indices are within bounds
+        for d in 1:8
+            @test 1 <= grididx[d] <= 3^grid.Rs[d]
+        end
+    end
+end
+
+@testitem "challenging tests - stress test with complex patterns" begin
+    # Grid with intentionally complex index table structure
+    grid = QuanticsGrids.NewDiscretizedGrid(
+        (:a, :b, :c, :d, :e),
+        [
+            [(:e, 1)],                           # site 1
+            [(:a, 5), (:c, 4)],                 # site 2: 2 vars fused
+            [(:b, 3)],                           # site 3
+            [(:a, 4), (:b, 2), (:d, 3)],       # site 4: 3 vars fused
+            [(:c, 3), (:e, 2)],                 # site 5: 2 vars fused
+            [(:a, 3)],                           # site 6
+            [(:b, 1), (:d, 2)],                 # site 7: 2 vars fused  
+            [(:a, 2), (:c, 2), (:d, 1), (:e, 3)], # site 8: 4 vars fused
+            [(:a, 1)],                           # site 9
+            [(:c, 1)]                            # site 10
+        ];
+        base=3
+    )
+
+    # Stress test with many random conversions
+    for _ in 1:200
+        # Generate valid quantics vector
+        quantics = [
+            rand(1:3),    # site 1
+            rand(1:9),    # site 2: 3^2 = 9
+            rand(1:3),    # site 3
+            rand(1:27),   # site 4: 3^3 = 27
+            rand(1:9),    # site 5: 3^2 = 9
+            rand(1:3),    # site 6
+            rand(1:9),    # site 7: 3^2 = 9
+            rand(1:81),   # site 8: 3^4 = 81
+            rand(1:3),    # site 9
+            rand(1:3)     # site 10
+        ]
+
+        grididx = QuanticsGrids.quantics_to_grididx(grid, quantics)
+        recovered = QuanticsGrids.grididx_to_quantics(grid, grididx)
+        @test recovered == quantics
+
+        # Verify grid indices are reasonable
+        @test all(1 .<= grididx .<= (3 .^ grid.Rs))
+    end
+end
