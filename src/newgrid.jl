@@ -166,7 +166,7 @@ function NewDiscretizedGrid(
     unfoldingscheme::Symbol=:interleaved,
     includeendpoint=false
 ) where {D}
-    indextable = _build_indextable(Rs, unfoldingscheme)
+    indextable = _build_indextable(variablenames, Rs, unfoldingscheme)
 
     return NewDiscretizedGrid{D}(Rs, lower_bound, upper_bound, variablenames, base, indextable, includeendpoint)
 end
@@ -175,14 +175,14 @@ function NewDiscretizedGrid(Rs::NTuple{D,Int}; kwargs...) where {D}
     return NewDiscretizedGrid(ntuple(Symbol, D), Rs; kwargs...)
 end
 
-function _build_indextable(Rs::NTuple{D,Int}, unfoldingscheme::Symbol) where D
+function _build_indextable(variablenames::NTuple{D,Symbol}, Rs::NTuple{D,Int}, unfoldingscheme::Symbol) where D
     indextable = Vector{Tuple{Symbol,Int}}[]
 
     for bitnumber in 1:maximum(Rs)
         if unfoldingscheme === :interleaved
-            _add_interleaved_indices!(indextable, Rs, bitnumber)
+            _add_interleaved_indices!(indextable, variablenames, Rs, bitnumber)
         elseif unfoldingscheme === :fused
-            _add_fused_indices!(indextable, Rs, bitnumber)
+            _add_fused_indices!(indextable, variablenames, Rs, bitnumber)
         else
             throw(ArgumentError(lazy"""Unfolding scheme $unfoldingscheme not supported. Use :interleaved or :fused.
             If you need a different scheme, please use the NewDiscretizedGrid(variablenames::NTuple{D,Symbol}, indextable::Vector{Vector{Tuple{Symbol,Int}}}) constructor."""))
@@ -192,21 +192,19 @@ function _build_indextable(Rs::NTuple{D,Int}, unfoldingscheme::Symbol) where D
     return indextable
 end
 
-function _add_interleaved_indices!(indextable, Rs::NTuple{D,Int}, bitnumber) where D
+function _add_interleaved_indices!(indextable, variablenames::NTuple{D,Symbol}, Rs::NTuple{D,Int}, bitnumber) where D
     for d in 1:D
         bitnumber ∈ 1:Rs[d] || continue
-        variablename = Symbol(d)
-        qindex = (variablename, bitnumber)
+        qindex = (variablenames[d], bitnumber)
         push!(indextable, [qindex])
     end
 end
 
-function _add_fused_indices!(indextable, Rs::NTuple{D,Int}, bitnumber) where D
+function _add_fused_indices!(indextable, variablenames::NTuple{D,Symbol}, Rs::NTuple{D,Int}, bitnumber) where D
     indices_bitnumber = Tuple{Symbol,Int}[]
     for d in 1:D
         bitnumber ∈ 1:Rs[d] || continue
-        variablename = Symbol(d)
-        qindex = (variablename, bitnumber)
+        qindex = (variablenames[d], bitnumber)
         push!(indices_bitnumber, qindex)
     end
     if !isempty(indices_bitnumber)

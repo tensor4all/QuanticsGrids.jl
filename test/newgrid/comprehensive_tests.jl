@@ -341,32 +341,61 @@
         origcoord = grididx_to_origcoord(grid2, test_grididx)
         back_to_grididx = QuanticsGrids.origcoord_to_grididx(grid2, origcoord)
         @test back_to_grididx == test_grididx
-        
+
         # Test includeendpoint as tuple of bools
         variablenames_tuple = (:x, :y)
         Rs_tuple = (3, 4)
         includeendpoint_tuple = (true, false)  # include endpoint for x, not for y
-        
-        grid3 = NewDiscretizedGrid(variablenames_tuple, Rs_tuple; 
+
+        grid3 = NewDiscretizedGrid(variablenames_tuple, Rs_tuple;
             includeendpoint=includeendpoint_tuple)
-            
+
         @test grid3.variablenames == variablenames_tuple
         @test grid3.Rs == Rs_tuple
-        
+
         # Test that upper bounds are adjusted correctly for each dimension
         lb3 = QuanticsGrids.lower_bound(grid3)
         ub3 = QuanticsGrids.upper_bound(grid3)
-        
+
         # For x (includeendpoint=true), upper bound should be adjusted
         # For y (includeendpoint=false), upper bound should be unchanged (default 1.0)
         @test lb3[1] ≈ 0.0  # default lower bound for x
         @test lb3[2] ≈ 0.0  # default lower bound for y
         @test ub3[2] ≈ 1.0  # default upper bound for y (unchanged due to includeendpoint=false)
-        
+
         # Test functionality with tuple includeendpoint
         test_grididx3 = (2, 2)
         origcoord3 = grididx_to_origcoord(grid3, test_grididx3)
         back_to_grididx3 = QuanticsGrids.origcoord_to_grididx(grid3, origcoord3)
         @test back_to_grididx3 == test_grididx3
     end
+end
+
+@testitem "integration test 1" begin
+    # This didn't work before
+    R = 5
+    ndims = 0
+    N = 2^R
+    # We use includeendpoint=false for our grid b/c our functions are
+    # periodic in momenta and want to avoid double counting the endpoint
+    fermi_frequencies_min = float(-(N - 1))
+    fermi_frequencies_max = float(+(N - 1) + 2) # bc includeendpoint=false
+    bose_frequencies_min = float(-N)
+    bose_frequencies_max = float(+(N - 2) + 2) # bc includeendpoint=false
+
+    momenta_min = ntuple(_ -> 0.0, ndims)
+    momenta_max = ntuple(_ -> 2.0pi, ndims)
+    grid_min = (fermi_frequencies_min, fermi_frequencies_min, bose_frequencies_min, momenta_min..., momenta_min..., momenta_min...)
+    grid_max = (fermi_frequencies_max, fermi_frequencies_max, bose_frequencies_max, momenta_max..., momenta_max..., momenta_max...)
+    k_syms = [Symbol("k$(dim)") for dim in 1:ndims]
+    k´_syms = [Symbol("k'$(dim)") for dim in 1:ndims]
+    q_syms = [Symbol("q$(dim)") for dim in 1:ndims]
+    Rs = (R, R, R, ntuple(Returns(R), ndims)..., ntuple(Returns(R), ndims)..., ntuple(Returns(R), ndims)...)
+    variablenames = (:v, :v´, :w, k_syms..., k´_syms..., q_syms...)
+    grid = NewDiscretizedGrid(variablenames, Rs;
+        lower_bound=grid_min,
+        upper_bound=grid_max,
+        unfoldingscheme=:interleaved,
+        includeendpoint=(true, true, true, ntuple(Returns(false), ndims)..., ntuple(Returns(false), ndims)..., ntuple(Returns(false), ndims)...))
+    @test origcoord_to_quantics(grid, 0.0) == [1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
 end
