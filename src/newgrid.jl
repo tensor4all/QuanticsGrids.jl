@@ -158,6 +158,7 @@ function rangecheck_R(R::Int; base::Int=2)::Bool
 end
 
 function NewDiscretizedGrid(
+    variablenames::NTuple{D,Symbol},
     Rs::NTuple{D,Int};
     lower_bound=default_lower_bound(Val(D)),
     upper_bound=default_upper_bound(Val(D)),
@@ -165,10 +166,13 @@ function NewDiscretizedGrid(
     unfoldingscheme::Symbol=:interleaved,
     includeendpoint::Bool=false
 ) where {D}
-    variablenames = ntuple(Symbol, D)
     indextable = _build_indextable(Rs, unfoldingscheme)
 
     return NewDiscretizedGrid{D}(Rs, lower_bound, upper_bound, variablenames, base, indextable, includeendpoint)
+end
+
+function NewDiscretizedGrid(Rs::NTuple{D,Int}; kwargs...) where {D}
+    return NewDiscretizedGrid(ntuple(Symbol, D), Rs; kwargs...)
 end
 
 function _build_indextable(Rs::NTuple{D,Int}, unfoldingscheme::Symbol) where D

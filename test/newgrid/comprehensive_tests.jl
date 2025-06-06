@@ -306,4 +306,40 @@
         quantics_from_grid_kw = grididx_to_quantics(test_grid_2d; x=grididx_tuple[1], y=grididx_tuple[2])
         @test quantics_from_grid_tuple == quantics_from_grid_kw
     end
+
+    # Test for new constructor with variablenames and Rs parameters
+    @testset "NewDiscretizedGrid constructor with variablenames and Rs" begin
+        variablenames = (:a, :b, :c)
+        Rs = (3, 4, 2)
+
+        # Test with default parameters
+        grid1 = NewDiscretizedGrid(variablenames, Rs)
+        @test grid1.variablenames == variablenames
+        @test grid1.Rs == Rs
+        @test grid1.base == 2  # default base
+        @test ndims(grid1) == 3
+
+        # Test with custom parameters
+        lower_bound = (-1.0, 0.0, -5.0)
+        upper_bound = (1.0, 2.0, 5.0)
+        base = 3
+
+        grid2 = NewDiscretizedGrid(variablenames, Rs;
+            lower_bound=lower_bound,
+            upper_bound=upper_bound,
+            base=base,
+            unfoldingscheme=:fused,
+            includeendpoint=true)
+
+        @test grid2.variablenames == variablenames
+        @test grid2.Rs == Rs
+        @test grid2.base == base
+        @test QuanticsGrids.lower_bound(grid2) == lower_bound
+
+        # Test basic functionality works
+        test_grididx = (2, 3, 1)
+        origcoord = grididx_to_origcoord(grid2, test_grididx)
+        back_to_grididx = QuanticsGrids.origcoord_to_grididx(grid2, origcoord)
+        @test back_to_grididx == test_grididx
+    end
 end
