@@ -378,3 +378,139 @@ end
     @test QuanticsGrids.grid_step(g) == 1.0 / 2^R
     @test QuanticsGrids.grid_origin(g) == 0.0
 end
+
+@testitem "grid_origcoords" begin
+    # Test 1D grid with default parameters
+    R = 4
+    grid_1d = NewDiscretizedGrid{1}(R; lower_bound=(0.0,), upper_bound=(1.0,))
+    coords_1d = QuanticsGrids.grid_origcoords(grid_1d, 1)
+
+    # Should return a range with correct length and bounds
+    @test length(coords_1d) == 2^R
+    @test coords_1d[1] ≈ QuanticsGrids.grid_min(grid_1d)
+    @test coords_1d[end] ≈ QuanticsGrids.grid_max(grid_1d)
+
+    # Test that coordinates match grididx_to_origcoord for all indices
+    for i in 1:2^R
+        @test coords_1d[i] ≈ grididx_to_origcoord(grid_1d, i)
+    end
+
+    # Test 2D grid
+    grid_2d = NewDiscretizedGrid((3, 4); lower_bound=(-1.0, 2.0), upper_bound=(5.0, 8.0))
+
+    # Test first dimension
+    coords_x = QuanticsGrids.grid_origcoords(grid_2d, 1)
+    @test length(coords_x) == 2^3
+    @test coords_x[1] ≈ QuanticsGrids.grid_min(grid_2d)[1]
+    @test coords_x[end] ≈ QuanticsGrids.grid_max(grid_2d)[1]
+
+    # Test second dimension  
+    coords_y = QuanticsGrids.grid_origcoords(grid_2d, 2)
+    @test length(coords_y) == 2^4
+    @test coords_y[1] ≈ QuanticsGrids.grid_min(grid_2d)[2]
+    @test coords_y[end] ≈ QuanticsGrids.grid_max(grid_2d)[2]
+
+    # Verify coordinates match grididx_to_origcoord
+    for i in 1:2^3
+        @test coords_x[i] ≈ grididx_to_origcoord(grid_2d, (i, 1))[1]
+    end
+    for j in 1:2^4
+        @test coords_y[j] ≈ grididx_to_origcoord(grid_2d, (1, j))[2]
+    end
+
+    # Test with different base
+    grid_base3 = NewDiscretizedGrid{1}(3; lower_bound=(0.0,), upper_bound=(2.7,), base=3)
+    coords_base3 = QuanticsGrids.grid_origcoords(grid_base3, 1)
+    @test length(coords_base3) == 3^3
+    @test coords_base3[1] ≈ QuanticsGrids.grid_min(grid_base3)
+    @test coords_base3[end] ≈ QuanticsGrids.grid_max(grid_base3)
+
+    # Test with includeendpoint=true
+    grid_endpoint = NewDiscretizedGrid{1}(3; lower_bound=(0.0,), upper_bound=(1.0,), includeendpoint=true)
+    coords_endpoint = QuanticsGrids.grid_origcoords(grid_endpoint, 1)
+    @test length(coords_endpoint) == 2^3
+    @test coords_endpoint[1] ≈ 0.0
+    @test coords_endpoint[end] ≈ 1.0  # Should reach exact upper bound
+
+    # Test with custom indextable
+    variablenames = (:x, :y, :z)
+    indextable = [
+        [(:x, 1), (:y, 1)],    # site 1: 2 indices
+        [(:z, 1)],             # site 2: 1 index
+        [(:x, 2), (:y, 2), (:z, 2)],  # site 3: 3 indices
+        [(:x, 3), (:y, 3)]     # site 4: 2 indices
+    ]
+    grid_custom = NewDiscretizedGrid(variablenames, indextable;
+        lower_bound=(-2.0, 1.0, 0.5), upper_bound=(3.0, 4.0, 2.0), base=2)
+
+    # Test each dimension
+    coords_x_custom = QuanticsGrids.grid_origcoords(grid_custom, 1)  # x dimension (3 quantics)
+    coords_y_custom = QuanticsGrids.grid_origcoords(grid_custom, 2)  # y dimension (3 quantics)
+    coords_z_custom = QuanticsGrids.grid_origcoords(grid_custom, 3)  # z dimension (2 quantics)
+
+    @test length(coords_x_custom) == 2^3  # x has 3 quantics
+    @test length(coords_y_custom) == 2^3  # y has 3 quantics
+    @test length(coords_z_custom) == 2^2  # z has 2 quantics
+
+    # Test bounds
+    @test coords_x_custom[1] ≈ QuanticsGrids.grid_min(grid_custom)[1]
+    @test coords_y_custom[1] ≈ QuanticsGrids.grid_min(grid_custom)[2]
+    @test coords_z_custom[1] ≈ QuanticsGrids.grid_min(grid_custom)[3]
+    @test coords_x_custom[end] ≈ QuanticsGrids.grid_max(grid_custom)[1]
+    @test coords_y_custom[end] ≈ QuanticsGrids.grid_max(grid_custom)[2]
+    @test coords_z_custom[end] ≈ QuanticsGrids.grid_max(grid_custom)[3]
+
+    # Test error handling - dimension out of bounds
+    @test_throws AssertionError QuanticsGrids.grid_origcoords(grid_1d, 0)
+    @test_throws AssertionError QuanticsGrids.grid_origcoords(grid_1d, 2)
+    @test_throws AssertionError QuanticsGrids.grid_origcoords(grid_2d, 3)
+    @test_throws AssertionError QuanticsGrids.grid_origcoords(grid_custom, 4)
+
+    # Test that returned range is iterable and has correct type
+    coords = QuanticsGrids.grid_origcoords(grid_1d, 1)
+    @test coords isa AbstractRange
+    @test eltype(coords) <: AbstractFloat
+
+    # Test consistency with grid spacing
+    grid_spacing = QuanticsGrids.grid_step(grid_2d)
+    coords_x_spacing = coords_x[2] - coords_x[1]
+    coords_y_spacing = coords_y[2] - coords_y[1]
+    @test coords_x_spacing ≈ grid_spacing[1]
+    @test coords_y_spacing ≈ grid_spacing[2]
+
+    # CHALLENGING TEST: Complex multi-dimensional grid with asymmetric resolutions
+    complex_Rs = (5, 3, 7, 2)  # Different resolutions per dimension
+    grid_complex = NewDiscretizedGrid(complex_Rs;
+        lower_bound=(-10.0, 0.1, 50.0, -2.5),
+        upper_bound=(15.0, 3.9, 100.0, 7.8),
+        base=3)
+
+    # Test each dimension has correct properties
+    for d in 1:4
+        coords_d = QuanticsGrids.grid_origcoords(grid_complex, d)
+        expected_length = 3^complex_Rs[d]
+        @test length(coords_d) == expected_length
+        @test coords_d[1] ≈ QuanticsGrids.grid_min(grid_complex)[d]
+        @test coords_d[end] ≈ QuanticsGrids.grid_max(grid_complex)[d]
+
+        # Test uniform spacing within each dimension
+        spacings = diff(collect(coords_d))
+        @test all(spacing -> spacing ≈ spacings[1], spacings)
+        @test spacings[1] ≈ QuanticsGrids.grid_step(grid_complex)[d]
+
+        # Test consistency with grididx_to_origcoord
+        test_indices = [1, expected_length ÷ 2, expected_length]
+        for idx in test_indices
+            grid_idx = ntuple(i -> i == d ? idx : 1, 4)
+            expected_coord = grididx_to_origcoord(grid_complex, grid_idx)[d]
+            @test coords_d[idx] ≈ expected_coord
+        end
+    end
+
+    # Test with very small grid (edge case)
+    grid_tiny = NewDiscretizedGrid{1}(1; lower_bound=(0.0,), upper_bound=(1.0,))
+    coords_tiny = QuanticsGrids.grid_origcoords(grid_tiny, 1)
+    @test length(coords_tiny) == 2
+    @test coords_tiny[1] ≈ 0.0
+    @test coords_tiny[2] ≈ 0.5  # For R=1, max coord should be 1 - 1/2 = 0.5
+end

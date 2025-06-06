@@ -370,10 +370,21 @@ upper_bound(g::NewDiscretizedGrid) = _convert_to_scalar_if_possible(g.upper_boun
 
 lower_bound(g::NewDiscretizedGrid) = _convert_to_scalar_if_possible(g.lower_bound)
 
+function grid_origcoords(g::NewDiscretizedGrid, d::Int)
+    @assert 1 ≤ d ≤ ndims(g) "Dimension $d out of bounds"
+    start = grid_min(g)[d]
+    stop = grid_max(g)[d]
+    length = g.base^g.Rs[d]
+    return range(start, stop, length)
+end
+
 function grididx_to_origcoord(g::NewDiscretizedGrid{D}, index) where {D}
     index_tuple = _to_tuple(Val(D), index)
     @assert all(1 .<= index .<= (g.base .^ g.Rs)) lazy"Grid-index $index out of bounds [1, $(g.base .^ g.Rs)]"
-    return _convert_to_scalar_if_possible((index .- 1) .* grid_step(g) .+ grid_min(g))
+    res = ntuple(D) do d
+        grid_origcoords(g, d)[index_tuple[d]]
+    end
+    return _convert_to_scalar_if_possible(res)
 end
 
 function origcoord_to_grididx(g::NewDiscretizedGrid{D}, coordinate) where {D}
@@ -383,14 +394,26 @@ function origcoord_to_grididx(g::NewDiscretizedGrid{D}, coordinate) where {D}
     bounds_upper = upper_bound(g)
     @assert all(bounds_lower .<= coord_tuple .<= bounds_upper) "Coordinate $coord_tuple out of bounds [$bounds_lower, $bounds_upper]"
 
-    min_vals = grid_min(g)
-    step_vals = grid_step(g)
-    raw_indices = @. round(Int, (coord_tuple - min_vals) / step_vals + 1)
-    min_indices = ntuple(Returns(1), D)
-    max_indices = g.base .^ g.Rs
-    clamped_indices = clamp.(raw_indices, min_indices, max_indices)
+    indices = ntuple(D) do d
+        coords = grid_origcoords(g, d)
+        target = coord_tuple[d]
 
-    return _convert_to_scalar_if_possible(clamped_indices)
+        idx = searchsortedfirst(coords, target)
+
+        if idx === lastindex(coords) + 1
+            lastindex(coords)  # Beyond end, use last
+        elseif idx === firstindex(coords)
+            firstindex(coords)  # At start, use first
+        else
+            if abs(coords[idx-1] - target) <= abs(coords[idx] - target)
+                idx - 1
+            else
+                idx
+            end
+        end
+    end
+
+    return _convert_to_scalar_if_possible(indices)
 end
 
 function origcoord_to_quantics(g::NewDiscretizedGrid{D}, coordinate) where {D}
