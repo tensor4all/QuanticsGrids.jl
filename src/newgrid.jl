@@ -378,6 +378,12 @@ function grid_origcoords(g::NewDiscretizedGrid, d::Int)
     return range(start, stop, length)
 end
 
+function grid_origcoords(g::NewDiscretizedGrid, variablename::Symbol)
+    d = findfirst(==(variablename), g.variablenames)
+    isnothing(d) && throw(ArgumentError("Variable name :$variablename not found in grid. Available variables: $(g.variablenames)"))
+    return grid_origcoords(g, d)
+end
+
 function grididx_to_origcoord(g::NewDiscretizedGrid{D}, index) where {D}
     index_tuple = _to_tuple(Val(D), index)
     @assert all(1 .<= index .<= (g.base .^ g.Rs)) lazy"Grid-index $index out of bounds [1, $(g.base .^ g.Rs)]"

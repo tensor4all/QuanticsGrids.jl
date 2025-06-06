@@ -444,9 +444,9 @@ end
         lower_bound=(-2.0, 1.0, 0.5), upper_bound=(3.0, 4.0, 2.0), base=2)
 
     # Test each dimension
-    coords_x_custom = QuanticsGrids.grid_origcoords(grid_custom, 1)  # x dimension (3 quantics)
-    coords_y_custom = QuanticsGrids.grid_origcoords(grid_custom, 2)  # y dimension (3 quantics)
-    coords_z_custom = QuanticsGrids.grid_origcoords(grid_custom, 3)  # z dimension (2 quantics)
+    coords_x_custom = QuanticsGrids.grid_origcoords(grid_custom, :x)  # x dimension (3 quantics)
+    coords_y_custom = QuanticsGrids.grid_origcoords(grid_custom, :y)  # y dimension (3 quantics)
+    coords_z_custom = QuanticsGrids.grid_origcoords(grid_custom, :z)  # z dimension (2 quantics)
 
     @test length(coords_x_custom) == 2^3  # x has 3 quantics
     @test length(coords_y_custom) == 2^3  # y has 3 quantics
