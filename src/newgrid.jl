@@ -164,7 +164,7 @@ function NewDiscretizedGrid(
     upper_bound=default_upper_bound(Val(D)),
     base::Int=2,
     unfoldingscheme::Symbol=:interleaved,
-    includeendpoint::Bool=false
+    includeendpoint=false
 ) where {D}
     indextable = _build_indextable(Rs, unfoldingscheme)
 
@@ -229,7 +229,7 @@ function NewDiscretizedGrid(
     lower_bound=default_lower_bound(Val(D)),
     upper_bound=default_upper_bound(Val(D)),
     base::Int=2,
-    includeendpoint::Bool=false
+    includeendpoint=false
 ) where D
     @assert all(Iterators.flatten(indextable)) do index
         first(index) ∈ variablenames

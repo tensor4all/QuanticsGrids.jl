@@ -341,5 +341,32 @@
         origcoord = grididx_to_origcoord(grid2, test_grididx)
         back_to_grididx = QuanticsGrids.origcoord_to_grididx(grid2, origcoord)
         @test back_to_grididx == test_grididx
+        
+        # Test includeendpoint as tuple of bools
+        variablenames_tuple = (:x, :y)
+        Rs_tuple = (3, 4)
+        includeendpoint_tuple = (true, false)  # include endpoint for x, not for y
+        
+        grid3 = NewDiscretizedGrid(variablenames_tuple, Rs_tuple; 
+            includeendpoint=includeendpoint_tuple)
+            
+        @test grid3.variablenames == variablenames_tuple
+        @test grid3.Rs == Rs_tuple
+        
+        # Test that upper bounds are adjusted correctly for each dimension
+        lb3 = QuanticsGrids.lower_bound(grid3)
+        ub3 = QuanticsGrids.upper_bound(grid3)
+        
+        # For x (includeendpoint=true), upper bound should be adjusted
+        # For y (includeendpoint=false), upper bound should be unchanged (default 1.0)
+        @test lb3[1] ≈ 0.0  # default lower bound for x
+        @test lb3[2] ≈ 0.0  # default lower bound for y
+        @test ub3[2] ≈ 1.0  # default upper bound for y (unchanged due to includeendpoint=false)
+        
+        # Test functionality with tuple includeendpoint
+        test_grididx3 = (2, 2)
+        origcoord3 = grididx_to_origcoord(grid3, test_grididx3)
+        back_to_grididx3 = QuanticsGrids.origcoord_to_grididx(grid3, origcoord3)
+        @test back_to_grididx3 == test_grididx3
     end
 end
