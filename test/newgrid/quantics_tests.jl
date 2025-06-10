@@ -301,27 +301,3 @@ end
         @test all(old_coord .≈ new_coord)
     end
 end
-
-@testitem "origcoord -> quantics compatibility with DiscretizedGrid" begin
-    new_grid = NewDiscretizedGrid{3}(1; unfoldingscheme=:fused)
-    old_grid = DiscretizedGrid{3}(1; unfoldingscheme=:fused)
-
-    coords = (0.9895059478711314, 0.12010481480481683, 0.762903387916837)
-
-    old_result = origcoord_to_quantics(old_grid, coords)
-    new_result = origcoord_to_quantics(new_grid, coords)
-    @show old_result new_result
-    @test old_result == new_result
-end
-
-@testitem "origcoord -> quantics compatibility with DiscretizedGrid" begin
-    old_grid = DiscretizedGrid{1}(1; unfoldingscheme=:fused)
-    new_grid = NewDiscretizedGrid{1}(1; unfoldingscheme=:fused)
-
-    coords = 0.9895059478711314
-
-    old_result = origcoord_to_quantics(old_grid, coords)
-    new_result = origcoord_to_quantics(new_grid, coords)
-    @show old_result new_result
-    @test old_result == new_result
-end

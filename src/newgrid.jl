@@ -412,39 +412,10 @@ function origcoord_to_grididx(g::NewDiscretizedGrid{D}, coordinate) where {D}
         target = coord_tuple[d]
         step_d = steps[d]
 
-        # Calculate the continuous index position
-        continuous_idx = (target - g.lower_bound[d]) / step_d + 1
+        continuous_idx = (target - bounds_lower[d]) / step_d + 1
 
-        # max_idx = g.base^g.Rs[d]
-        # if continuous_idx > max_idx
-        #     max_idx
-        # else
-        #     round(Int, continuous_idx)
-        # end
-
-        # # Get the floor and ceiling indices
-        # idx_low = floor(Int, continuous_idx)
-        # idx_high = ceil(Int, continuous_idx)
-
-        # # Clamp to valid range
-        # max_idx = g.base^g.Rs[d]
-        # idx_low = clamp(idx_low, 1, max_idx)
-        # idx_high = clamp(idx_high, 1, max_idx)
-
-        # # If they're the same, return that index
-        # if idx_low == idx_high
-        #     return idx_low
-        # end
-
-        # # Compare distances to choose the closer point
-        # coord_low = g.lower_bound[d] + (idx_low - 1) * step_d
-        # coord_high = g.lower_bound[d] + (idx_high - 1) * step_d
-
-        # if abs(coord_low - target) <= abs(coord_high - target)
-        #     idx_low
-        # else
-        #     idx_high
-        # end
+        discrete_idx = round(Int, continuous_idx)
+        clamp(discrete_idx, 1, g.base^g.Rs[d])
     end
 
     return _convert_to_scalar_if_possible(indices)
