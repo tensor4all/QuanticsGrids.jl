@@ -163,7 +163,7 @@ function NewDiscretizedGrid(
     lower_bound=default_lower_bound(Val(D)),
     upper_bound=default_upper_bound(Val(D)),
     base::Int=2,
-    unfoldingscheme::Symbol=:interleaved,
+    unfoldingscheme::Symbol=:fused,
     includeendpoint=false
 ) where {D}
     indextable = _build_indextable(variablenames, Rs, unfoldingscheme)
@@ -202,7 +202,9 @@ end
 
 function _add_fused_indices!(indextable, variablenames::NTuple{D,Symbol}, Rs::NTuple{D,Int}, bitnumber) where D
     indices_bitnumber = Tuple{Symbol,Int}[]
-    for d in 1:D
+    # Add dimensions in reverse order to match DiscretizedGrid convention
+    # where the first dimension varies fastest in fused quantics
+    for d in D:-1:1
         bitnumber ∈ 1:Rs[d] || continue
         qindex = (variablenames[d], bitnumber)
         push!(indices_bitnumber, qindex)
@@ -389,9 +391,12 @@ end
 function grididx_to_origcoord(g::NewDiscretizedGrid{D}, index) where {D}
     index_tuple = _to_tuple(Val(D), index)
     @assert all(1 .<= index .<= (g.base .^ g.Rs)) lazy"Grid-index $index out of bounds [1, $(g.base .^ g.Rs)]"
+
     res = ntuple(D) do d
-        grid_origcoords(g, d)[index_tuple[d]]
+        step_d = (g.upper_bound[d] - g.lower_bound[d]) / (g.base^g.Rs[d])
+        g.lower_bound[d] + (index_tuple[d] - 1) * step_d
     end
+
     return _convert_to_scalar_if_possible(res)
 end
 
@@ -402,23 +407,44 @@ function origcoord_to_grididx(g::NewDiscretizedGrid{D}, coordinate) where {D}
     bounds_upper = upper_bound(g)
     @assert all(bounds_lower .<= coord_tuple .<= bounds_upper) "Coordinate $coord_tuple out of bounds [$bounds_lower, $bounds_upper]"
 
+    steps = grid_step(g)
     indices = ntuple(D) do d
-        coords = grid_origcoords(g, d)
         target = coord_tuple[d]
+        step_d = steps[d]
 
-        idx = searchsortedfirst(coords, target)
+        # Calculate the continuous index position
+        continuous_idx = (target - g.lower_bound[d]) / step_d + 1
 
-        if idx === lastindex(coords) + 1
-            lastindex(coords)  # Beyond end, use last
-        elseif idx === firstindex(coords)
-            firstindex(coords)  # At start, use first
-        else
-            if abs(coords[idx-1] - target) <= abs(coords[idx] - target)
-                idx - 1
-            else
-                idx
-            end
-        end
+        # max_idx = g.base^g.Rs[d]
+        # if continuous_idx > max_idx
+        #     max_idx
+        # else
+        #     round(Int, continuous_idx)
+        # end
+
+        # # Get the floor and ceiling indices
+        # idx_low = floor(Int, continuous_idx)
+        # idx_high = ceil(Int, continuous_idx)
+
+        # # Clamp to valid range
+        # max_idx = g.base^g.Rs[d]
+        # idx_low = clamp(idx_low, 1, max_idx)
+        # idx_high = clamp(idx_high, 1, max_idx)
+
+        # # If they're the same, return that index
+        # if idx_low == idx_high
+        #     return idx_low
+        # end
+
+        # # Compare distances to choose the closer point
+        # coord_low = g.lower_bound[d] + (idx_low - 1) * step_d
+        # coord_high = g.lower_bound[d] + (idx_high - 1) * step_d
+
+        # if abs(coord_low - target) <= abs(coord_high - target)
+        #     idx_low
+        # else
+        #     idx_high
+        # end
     end
 
     return _convert_to_scalar_if_possible(indices)

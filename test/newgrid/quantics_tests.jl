@@ -1,5 +1,5 @@
 @testitem "constructor, square grid" begin
-    grid = NewDiscretizedGrid{2}(10)
+    grid = NewDiscretizedGrid{2}(10; unfoldingscheme=:interleaved)
     @test grid.Rs == (10, 10)
     @test only(grid.indextable[1])[1] == Symbol(1)
     @test only(grid.indextable[1])[2] == 1
@@ -8,7 +8,7 @@
 end
 
 @testitem "constructor, rectangular grid" begin
-    grid = NewDiscretizedGrid((3, 5))
+    grid = NewDiscretizedGrid((3, 5); unfoldingscheme=:interleaved)
     @test only(grid.indextable[6])[1] == Symbol(2)
     @test only(grid.indextable[6])[2] == 3
     @test only(grid.indextable[7])[1] == Symbol(2)
@@ -18,12 +18,12 @@ end
 end
 
 @testitem "quantics_to_grididx, rectangular grid" begin
-    grid = NewDiscretizedGrid((3, 5))
+    grid = NewDiscretizedGrid((3, 5); unfoldingscheme=:interleaved)
     @test quantics_to_grididx(grid, [1, 2, 1, 2, 1, 2, 1, 2]) == (1, 30)
 end
 
 @testitem "grididx_to_quantics, rectangular grid" begin
-    grid = NewDiscretizedGrid((3, 5))
+    grid = NewDiscretizedGrid((3, 5); unfoldingscheme=:interleaved)
     @test grididx_to_quantics(grid, (1, 30)) == [1, 2, 1, 2, 1, 2, 1, 2]
 end
 
@@ -74,7 +74,7 @@ end
 
 @testitem "challenging tests - extreme edge cases" begin
     # Test with minimum valid grididx (all 1s)
-    grid = NewDiscretizedGrid((10, 5, 8))
+    grid = NewDiscretizedGrid((10, 5, 8); unfoldingscheme=:interleaved)
     min_grididx = (1, 1, 1)
     quantics = grididx_to_quantics(grid, min_grididx)
     @test all(q -> q == 1, quantics)
@@ -98,7 +98,7 @@ end
     end
 
     # Test with base 5
-    grid = NewDiscretizedGrid((3, 4); base=5)
+    grid = NewDiscretizedGrid((3, 4); base=5, unfoldingscheme=:interleaved)
     for _ in 1:50
         grididx = (rand(1:5^3), rand(1:5^4))
         quantics = grididx_to_quantics(grid, grididx)
@@ -235,4 +235,93 @@ end
         # Verify grid indices are reasonable
         @test all(1 .<= grididx .<= (3 .^ grid.Rs))
     end
+end
+
+@testitem "fused ordering compatibility with DiscretizedGrid" begin
+    using QuanticsGrids: DiscretizedGrid
+
+    # Test 2D case - this was the main issue discovered during benchmarking
+    # where coordinates were being swapped between implementations
+    R = 3  # Use same R for both dimensions to create equivalent grids
+    lower = (0.0, 0.0)
+    upper = (1.0, 1.0)
+
+    # Create equivalent grids
+    old_grid = DiscretizedGrid{2}(R, lower, upper; unfoldingscheme=:fused)
+    new_grid = NewDiscretizedGrid((R, R); lower_bound=lower, upper_bound=upper, unfoldingscheme=:fused)
+
+    # Test specific quantics vectors that revealed the ordering issue
+    test_cases = [
+        [1, 2, 1],  # This was giving different coordinates before the fix
+        [2, 1, 2],
+        [1, 1, 1],  # Edge case: all 1s
+        [2, 2, 2],  # Edge case: all 2s
+        [2, 1, 1],
+        [1, 2, 2]
+    ]
+
+    for quantics in test_cases
+        # Convert to coordinates using both implementations
+        old_coord = quantics_to_origcoord(old_grid, quantics)
+        new_coord = quantics_to_origcoord(new_grid, quantics)
+
+        # Coordinates should be identical (within floating point precision)
+        @test all(old_coord .≈ new_coord)
+
+        # Also verify the round-trip consistency within each implementation
+        old_grididx = quantics_to_grididx(old_grid, quantics)
+        new_grididx = quantics_to_grididx(new_grid, quantics)
+        @test old_grididx == new_grididx
+
+        # Verify quantics -> grididx -> origcoord is consistent
+        old_coord_via_grididx = grididx_to_origcoord(old_grid, old_grididx)
+        new_coord_via_grididx = grididx_to_origcoord(new_grid, new_grididx)
+        @test all(old_coord_via_grididx .≈ new_coord_via_grididx)
+    end
+
+    # Test 3D case to ensure the fix works for higher dimensions
+    R_3d = 2  # Use same R for all dimensions
+    lower_3d = (0.0, 0.0, 0.0)
+    upper_3d = (1.0, 1.0, 1.0)
+
+    old_grid_3d = DiscretizedGrid{3}(R_3d, lower_3d, upper_3d; unfoldingscheme=:fused)
+    new_grid_3d = NewDiscretizedGrid((R_3d, R_3d, R_3d); lower_bound=lower_3d, upper_bound=upper_3d, unfoldingscheme=:fused)
+
+    # Test several 3D quantics vectors
+    test_cases_3d = [
+        [1, 1],  # Length R=2 for fused scheme
+        [2, 2],
+        [1, 2],
+        [2, 1]
+    ]
+
+    for quantics in test_cases_3d
+        old_coord = quantics_to_origcoord(old_grid_3d, quantics)
+        new_coord = quantics_to_origcoord(new_grid_3d, quantics)
+        @test all(old_coord .≈ new_coord)
+    end
+end
+
+@testitem "origcoord -> quantics compatibility with DiscretizedGrid" begin
+    new_grid = NewDiscretizedGrid{3}(1; unfoldingscheme=:fused)
+    old_grid = DiscretizedGrid{3}(1; unfoldingscheme=:fused)
+
+    coords = (0.9895059478711314, 0.12010481480481683, 0.762903387916837)
+
+    old_result = origcoord_to_quantics(old_grid, coords)
+    new_result = origcoord_to_quantics(new_grid, coords)
+    @show old_result new_result
+    @test old_result == new_result
+end
+
+@testitem "origcoord -> quantics compatibility with DiscretizedGrid" begin
+    old_grid = DiscretizedGrid{1}(1; unfoldingscheme=:fused)
+    new_grid = NewDiscretizedGrid{1}(1; unfoldingscheme=:fused)
+
+    coords = 0.9895059478711314
+
+    old_result = origcoord_to_quantics(old_grid, coords)
+    new_result = origcoord_to_quantics(new_grid, coords)
+    @show old_result new_result
+    @test old_result == new_result
 end

@@ -4,7 +4,7 @@
     grid = NewDiscretizedGrid{1}(R; lower_bound=(0.0,), upper_bound=(1.0,))
     @test QuanticsGrids.localdimensions(grid) == fill(2, R)
 
-    grid_2d = NewDiscretizedGrid((R, R); lower_bound=(0.0, 0.0), upper_bound=(1.0, 1.0))
+    grid_2d = NewDiscretizedGrid((R, R); lower_bound=(0.0, 0.0), upper_bound=(1.0, 1.0), unfoldingscheme=:interleaved)
     @test QuanticsGrids.localdimensions(grid_2d) == fill(2, 2R)
 
     # Test with different base values

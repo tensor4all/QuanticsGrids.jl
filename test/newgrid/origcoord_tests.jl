@@ -187,7 +187,7 @@ end
 
 @testitem "edge cases - mixed R values including zeros" begin
     # Grid with mix of zero and non-zero R values
-    grid = NewDiscretizedGrid((0, 5, 0, 3, 0))
+    grid = NewDiscretizedGrid((0, 5, 0, 3, 0); unfoldingscheme=:interleaved)
 
     # Test conversion with valid quantics length
     quantics = [1, 2, 1, 2, 1, 2, 1, 2]  # Only bits for dimensions with R>0

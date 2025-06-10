@@ -158,7 +158,7 @@
         @test result1 ≈ result2
     end
 
-    simple_grid = NewDiscretizedGrid((3, 4); base=5, lower_bound=(0.0, -1.0), upper_bound=(1.0, 1.0))
+    simple_grid = NewDiscretizedGrid((3, 4); base=5, lower_bound=(0.0, -1.0), upper_bound=(1.0, 1.0), unfoldingscheme=:interleaved)
     @test simple_grid.Rs == (3, 4)
     @test simple_grid.base == 5
     @test QuanticsGrids.localdimensions(simple_grid) == [5, 5, 5, 5, 5, 5, 5]
@@ -376,8 +376,6 @@ end
     R = 5
     ndims = 0
     N = 2^R
-    # We use includeendpoint=false for our grid b/c our functions are
-    # periodic in momenta and want to avoid double counting the endpoint
     fermi_frequencies_min = float(-(N - 1))
     fermi_frequencies_max = float(+(N - 1) + 2) # bc includeendpoint=false
     bose_frequencies_min = float(-N)
