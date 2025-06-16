@@ -107,6 +107,7 @@ struct NewDiscretizedGrid{D}
         lookup_table = _build_lookup_table(Rs, indextable, variablenames, Val(D))
 
         includeendpoint = _to_tuple(Val(D), includeendpoint)
+        @assert all(d -> nand(iszero(Rs[d]), includeendpoint[d]), 1:D)
         lower_bound = _to_tuple(Val(D), lower_bound)
         upper_bound = _to_tuple(Val(D), upper_bound)
 
@@ -240,6 +241,10 @@ function NewDiscretizedGrid(
     end)
 
     return NewDiscretizedGrid{D}(Rs, lower_bound, upper_bound, variablenames, base, indextable, includeendpoint)
+end
+
+function NewDiscretizedGrid(R::Int, lower_bound, upper_bound; kwargs...)
+    NewDiscretizedGrid((R,); lower_bound=(lower_bound,), upper_bound=(upper_bound,), kwargs...)
 end
 
 default_lower_bound(::Val{D}) where D = ntuple(Returns(0.0), D)

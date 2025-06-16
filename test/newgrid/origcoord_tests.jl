@@ -398,3 +398,42 @@ end
         @test QuanticsGrids.origcoord_to_grididx(grid, origcoord) == grididx
     end
 end
+
+@testitem "R=0 dimension behavior - 2D grid with proper semantics" begin
+    # Test a 2D grid where one dimension has R=0 and the other has R=3
+    grid = NewDiscretizedGrid((0, 3); lower_bound=(-1.0, 2.0), upper_bound=(1.0, 6.0))
+
+    # R=0 dimension should only accept grid index 1
+    @test_nowarn grididx_to_quantics(grid, (1, 1))
+    @test_throws AssertionError grididx_to_quantics(grid, (2, 1))
+
+    # All coordinates in R=0 dimension should map to grid index 1
+    @test origcoord_to_grididx(grid, (-0.5, 2.0))[1] == 1
+    @test origcoord_to_grididx(grid, (0.5, 2.0))[1] == 1
+
+    # Grid index 1 in R=0 dimension
+    coord = grididx_to_origcoord(grid, (1, 1))
+    @test coord[1] ≈ -1.
+
+    # Quantics should only contain indices for R>0 dimensions
+    @test length(grididx_to_quantics(grid, (1, 1))) == 3  # Only for R=3 dimension
+
+    # Test grid bounds functions
+    @test QuanticsGrids.grid_min(grid)[1] ≈ -1.0  # R=0 dimension: midpoint
+    @test QuanticsGrids.grid_max(grid)[1] ≈ -1.0  # R=0 dimension: midpoint
+    @test QuanticsGrids.grid_min(grid)[2] ≈ 2.0  # R=3 dimension: lower bound
+
+    # Test grid_origcoords for R=0 dimension
+    coords_r0 = QuanticsGrids.grid_origcoords(grid, 1)
+    @test length(coords_r0) == 1  # Only one point for R=0
+    @test coords_r0[1] ≈ -1.0  # Should be the midpoint
+
+    coords_r3 = QuanticsGrids.grid_origcoords(grid, 2)
+    @test length(coords_r3) == 8  # 2^3 points for R=3
+
+    # Test round-trip consistency
+    quantics = grididx_to_quantics(grid, (1, 5))
+    @test quantics_to_grididx(grid, quantics) == (1, 5)
+
+    @test_throws AssertionError NewDiscretizedGrid((3, 0); includeendpoint=true)
+end
