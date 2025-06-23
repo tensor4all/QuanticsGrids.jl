@@ -94,14 +94,11 @@ struct NewDiscretizedGrid{D}
     function NewDiscretizedGrid{D}(
         Rs, lower_bound, upper_bound, variablenames, base, indextable, includeendpoint
     ) where {D}
+        @assert all(lower_bound .< upper_bound)
+
         discretegrid = NewInherentDiscreteGrid(variablenames, indextable; base)
         lower_bound = _to_tuple(Val(D), lower_bound)
         upper_bound = _to_tuple(Val(D), upper_bound)
-
-        @assert all(>=(0), Rs)
-        @assert all(lower_bound .< upper_bound)
-        @assert base > 1
-        @assert all(R -> rangecheck_R(R; base), Rs)
 
         upper_bound = _adjust_upper_bounds(
             upper_bound, lower_bound, includeendpoint, base, Rs, Val(D)
@@ -110,6 +107,10 @@ struct NewDiscretizedGrid{D}
         return new{D}(discretegrid, lower_bound, upper_bound)
     end
 end
+
+# ============================================================================
+# Helper/utility functions
+# ============================================================================
 
 function _adjust_upper_bounds(upper_bound, lower_bound, includeendpoint, base, Rs, ::Val{D}) where D
     includeendpoint = _to_tuple(Val(D), includeendpoint)
@@ -123,6 +124,27 @@ function _adjust_upper_bounds(upper_bound, lower_bound, includeendpoint, base, R
         end
     end
 end
+
+default_lower_bound(::Val{D}) where D = _to_tuple(Val(D), 0.0)
+
+default_upper_bound(::Val{D}) where D = _to_tuple(Val(D), 1.0)
+
+function _handle_kwargs_input(g::NewDiscretizedGrid{D}; kwargs...) where {D}
+    provided_keys = keys(kwargs)
+    expected_keys = grid_variablenames(g)
+    @assert Set(provided_keys) == Set(expected_keys) "Expected keyword arguments $(expected_keys), got $(tuple(provided_keys...))"
+
+    @assert all(v -> v isa Real, values(kwargs)) "All keyword argument values must be Real numbers"
+
+    return ntuple(D) do d
+        variablename = grid_variablenames(g)[d]
+        kwargs[variablename]
+    end
+end
+
+# ============================================================================
+# Constructors
+# ============================================================================
 
 function NewDiscretizedGrid(
     variablenames::NTuple{D,Symbol},
@@ -141,7 +163,6 @@ end
 function NewDiscretizedGrid(Rs::NTuple{D,Int}; kwargs...) where {D}
     return NewDiscretizedGrid(ntuple(Symbol, D), Rs; kwargs...)
 end
-
 
 function NewDiscretizedGrid{D}(
     R::Int,
@@ -171,38 +192,13 @@ function NewDiscretizedGrid(
     return NewDiscretizedGrid{D}(Rs, lower_bound, upper_bound, variablenames, base, indextable, includeendpoint)
 end
 
-function NewDiscretizedGrid(R::Int, lower_bound, upper_bound; kwargs...)
-    NewDiscretizedGrid((R,); lower_bound=(lower_bound,), upper_bound=(upper_bound,), kwargs...)
+function NewDiscretizedGrid(R::Int, lower_bound::Real, upper_bound::Real; kwargs...)
+    return NewDiscretizedGrid{1}(R, lower_bound, upper_bound; kwargs...)
 end
 
-default_lower_bound(::Val{D}) where D = _to_tuple(Val(D), 0.0)
-
-default_upper_bound(::Val{D}) where D = _to_tuple(Val(D), 1.0)
-
-function sitedim(g::NewDiscretizedGrid, site::Int)::Int
-    @assert site ∈ eachindex(grid_indextable(g))
-    return grid_base(g)^length(grid_indextable(g)[site])
-end
-
-function quantics_to_grididx(g::NewDiscretizedGrid, quantics::AbstractVector{Int})
-    return quantics_to_grididx(g.discretegrid, quantics)
-end
-
-function grididx_to_quantics(g::NewDiscretizedGrid, grididx)
-    return grididx_to_quantics(g.discretegrid, grididx)
-end
-
-grid_min(g::NewDiscretizedGrid) = _convert_to_scalar_if_possible(g.lower_bound)
-
-grid_max(g::NewDiscretizedGrid) = _convert_to_scalar_if_possible(g.upper_bound .- grid_step(g))
-
-grid_step(g::NewDiscretizedGrid) = _convert_to_scalar_if_possible(
-    (upper_bound(g) .- lower_bound(g)) ./ (grid_base(g) .^ grid_Rs(g)),
-)
-
-upper_bound(g::NewDiscretizedGrid) = _convert_to_scalar_if_possible(g.upper_bound)
-
-lower_bound(g::NewDiscretizedGrid) = _convert_to_scalar_if_possible(g.lower_bound)
+# ============================================================================
+# Basic property accessor functions
+# ============================================================================
 
 Base.ndims(::NewDiscretizedGrid{D}) where D = D
 
@@ -216,6 +212,29 @@ grid_base(g::NewDiscretizedGrid{D}) where D = grid_base(g.discretegrid)
 
 grid_variablenames(g::NewDiscretizedGrid{D}) where D = grid_variablenames(g.discretegrid)
 
+upper_bound(g::NewDiscretizedGrid) = _convert_to_scalar_if_possible(g.upper_bound)
+
+lower_bound(g::NewDiscretizedGrid) = _convert_to_scalar_if_possible(g.lower_bound)
+
+grid_origin(g::NewDiscretizedGrid) = lower_bound(g)
+
+function sitedim(g::NewDiscretizedGrid, site::Int)::Int
+    @assert site ∈ eachindex(grid_indextable(g))
+    return grid_base(g)^length(grid_indextable(g)[site])
+end
+
+# ============================================================================
+# Grid coordinate functions
+# ============================================================================
+
+grid_min(g::NewDiscretizedGrid) = _convert_to_scalar_if_possible(g.lower_bound)
+
+grid_max(g::NewDiscretizedGrid) = _convert_to_scalar_if_possible(g.upper_bound .- grid_step(g))
+
+grid_step(g::NewDiscretizedGrid) = _convert_to_scalar_if_possible(
+    (upper_bound(g) .- lower_bound(g)) ./ (grid_base(g) .^ grid_Rs(g)),
+)
+
 function grid_origcoords(g::NewDiscretizedGrid, d::Int)
     @assert 1 ≤ d ≤ ndims(g) "Dimension $d out of bounds"
     start = grid_min(g)[d]
@@ -228,6 +247,18 @@ function grid_origcoords(g::NewDiscretizedGrid, variablename::Symbol)
     d = findfirst(==(variablename), grid_variablenames(g))
     isnothing(d) && throw(ArgumentError("Variable name :$variablename not found in grid. Available variables: $(grid_variablenames(g))"))
     return grid_origcoords(g, d)
+end
+
+# ============================================================================
+# Core conversion functions
+# ============================================================================
+
+function quantics_to_grididx(g::NewDiscretizedGrid, quantics::AbstractVector{Int})
+    return quantics_to_grididx(g.discretegrid, quantics)
+end
+
+function grididx_to_quantics(g::NewDiscretizedGrid, grididx)
+    return grididx_to_quantics(g.discretegrid, grididx)
 end
 
 function grididx_to_origcoord(g::NewDiscretizedGrid{D}, index) where {D}
@@ -274,37 +305,9 @@ function quantics_to_origcoord(g::NewDiscretizedGrid{D}, quantics::AbstractVecto
     return grididx_to_origcoord(g, grid_idx)
 end
 
-function localdimensions(g::NewDiscretizedGrid)::Vector{Int}
-    return grid_base(g) .^ length.(grid_indextable(g))
-end
-
-function quanticsfunction(::Type{T}, g::NewDiscretizedGrid, f::F)::Function where {T,F<:Function}
-    function wrapped_function(quantics)::T
-        coords = quantics_to_origcoord(g, quantics)
-        if coords isa Tuple
-            return f(coords...)
-        else
-            return f(coords)
-        end
-    end
-    return wrapped_function
-end
-grid_origin(g::NewDiscretizedGrid) = lower_bound(g)
-
+# ============================================================================
 # Keyword argument convenience functions
-
-function _handle_kwargs_input(g::NewDiscretizedGrid{D}; kwargs...) where {D}
-    provided_keys = keys(kwargs)
-    expected_keys = grid_variablenames(g)
-    @assert Set(provided_keys) == Set(expected_keys) "Expected keyword arguments $(expected_keys), got $(tuple(provided_keys...))"
-
-    @assert all(v -> v isa Real, values(kwargs)) "All keyword argument values must be Real numbers"
-
-    return ntuple(D) do d
-        variablename = grid_variablenames(g)[d]
-        kwargs[variablename]
-    end
-end
+# ============================================================================
 
 function origcoord_to_grididx(g::NewDiscretizedGrid; kwargs...)
     coordinate = _handle_kwargs_input(g; kwargs...)
@@ -325,6 +328,30 @@ function grididx_to_quantics(g::NewDiscretizedGrid; kwargs...)
     index = _handle_kwargs_input(g; kwargs...)
     return grididx_to_quantics(g, index)
 end
+
+# ============================================================================
+# Other utility functions
+# ============================================================================
+
+function localdimensions(g::NewDiscretizedGrid)::Vector{Int}
+    return grid_base(g) .^ length.(grid_indextable(g))
+end
+
+function quanticsfunction(::Type{T}, g::NewDiscretizedGrid, f::F)::Function where {T,F<:Function}
+    function wrapped_function(quantics)::T
+        coords = quantics_to_origcoord(g, quantics)
+        if coords isa Tuple
+            return f(coords...)
+        else
+            return f(coords)
+        end
+    end
+    return wrapped_function
+end
+
+# ============================================================================
+# Display/show methods
+# ============================================================================
 
 function Base.show(io::IO, ::MIME"text/plain", g::NewDiscretizedGrid{D}) where D
     print(io, "NewDiscretizedGrid{$D}")

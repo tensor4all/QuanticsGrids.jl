@@ -34,61 +34,9 @@ struct NewInherentDiscreteGrid{D}
     end
 end
 
-function NewInherentDiscreteGrid{D}(
-    Rs,
-    origin=default_origin(Val(D));
-    unfoldingscheme=:fused,
-    step=default_step(Val(D)),
-    base=2
-) where D
-    Rs = _to_tuple(Val(D), Rs)
-    origin = _to_tuple(Val(D), origin)
-    step = _to_tuple(Val(D), step)
-    variablenames = ntuple(Symbol, D)
-    indextable = _build_indextable(variablenames, Rs, unfoldingscheme)
-    NewInherentDiscreteGrid{D}(Rs, origin, step, variablenames, base, indextable)
-end
-
-function NewInherentDiscreteGrid(
-    variablenames::NTuple{D,Symbol},
-    indextable::Vector{Vector{Tuple{Symbol,Int}}};
-    origin=default_origin(Val(D)),
-    step=default_step(Val(D)),
-    base=2
-) where D
-    @assert all(Iterators.flatten(indextable)) do index
-        first(index) ∈ variablenames
-    end
-
-    Rs = Tuple(map(variablenames) do variablename
-        count(index -> first(index) == variablename, Iterators.flatten(indextable))
-    end)
-
-    return NewInherentDiscreteGrid{D}(Rs, origin, step, variablenames, base, indextable)
-end
-
-function NewInherentDiscreteGrid(
-    variablenames::NTuple{D,Symbol},
-    Rs::NTuple{D,Int};
-    origin=default_origin(Val(D)),
-    step=default_step(Val(D)),
-    base=2,
-    unfoldingscheme=:fused
-) where {D}
-    origin = _to_tuple(Val(D), origin)
-    step = _to_tuple(Val(D), step)
-    indextable = _build_indextable(variablenames, Rs, unfoldingscheme)
-    return NewInherentDiscreteGrid{D}(Rs, origin, step, variablenames, base, indextable)
-end
-
-function NewInherentDiscreteGrid(Rs::NTuple{D,Int}; kwargs...) where {D}
-    variablenames = ntuple(Symbol, D)
-    return NewInherentDiscreteGrid(variablenames, Rs; kwargs...)
-end
-
-function NewInherentDiscreteGrid(R::Int, origin; kwargs...)
-    return NewInherentDiscreteGrid{1}(R, origin; kwargs...)
-end
+# ============================================================================
+# Helper/utility functions
+# ============================================================================
 
 default_step(::Val{D}) where D = ntuple(Returns(1), D)
 
@@ -159,28 +107,6 @@ function _add_fused_indices!(indextable, variablenames::NTuple{D,Symbol}, Rs::NT
     end
 end
 
-Base.ndims(::NewInherentDiscreteGrid{D}) where D = D
-
-Base.length(g::NewInherentDiscreteGrid) = length(g.indextable)
-
-function sitedim(g::NewInherentDiscreteGrid, site::Int)::Int
-    @assert site ∈ eachindex(g.indextable)
-    return g.base^length(g.indextable[site])
-end
-
-function quantics_to_grididx(g::NewInherentDiscreteGrid{D}, quantics::AbstractVector{Int}) where D
-    @assert length(quantics) == length(g)
-    @assert all(site -> quantics[site] ∈ 1:sitedim(g, site), eachindex(quantics))
-
-    result = if g.base == 2
-        _quantics_to_grididx_base2(g, quantics)
-    else
-        _quantics_to_grididx_general(g, quantics)
-    end
-
-    return _convert_to_scalar_if_possible(result)
-end
-
 function _quantics_to_grididx_general(g::NewInherentDiscreteGrid{D}, quantics) where D
     base = g.base
 
@@ -218,23 +144,6 @@ function _quantics_to_grididx_base2(g::NewInherentDiscreteGrid{D}, quantics) whe
         end
         grididx + 1
     end
-end
-
-function grididx_to_quantics(g::NewInherentDiscreteGrid{D}, grididx) where D
-    grididx_tuple = _to_tuple(Val(D), grididx)
-
-    @assert length(grididx_tuple) == D lazy"Grid index must have dimension $D, got $(length(grididx_tuple))"
-    @assert all(1 ≤ grididx_tuple[d] ≤ g.base^g.Rs[d] for d in 1:D) "Grid index out of bounds"
-
-    result = ones(Int, length(g.indextable))
-
-    if g.base == 2
-        _grididx_to_quantics_base2!(result, g, grididx_tuple)
-    else
-        _grididx_to_quantics_general!(result, g, grididx_tuple)
-    end
-
-    return result
 end
 
 function _grididx_to_quantics_general!(result::Vector{Int}, g::NewInherentDiscreteGrid{D}, grididx::NTuple{D,Int}) where D
@@ -275,15 +184,73 @@ function _grididx_to_quantics_base2!(result::Vector{Int}, g::NewInherentDiscrete
     end
 end
 
-grid_min(g::NewInherentDiscreteGrid) = _convert_to_scalar_if_possible(g.origin)
+# ============================================================================
+# Constructors
+# ============================================================================
 
-grid_origin(g::NewInherentDiscreteGrid) = _convert_to_scalar_if_possible(g.origin)
+function NewInherentDiscreteGrid{D}(
+    Rs,
+    origin=default_origin(Val(D));
+    unfoldingscheme=:fused,
+    step=default_step(Val(D)),
+    base=2
+) where D
+    Rs = _to_tuple(Val(D), Rs)
+    origin = _to_tuple(Val(D), origin)
+    step = _to_tuple(Val(D), step)
+    variablenames = ntuple(Symbol, D)
+    indextable = _build_indextable(variablenames, Rs, unfoldingscheme)
+    NewInherentDiscreteGrid{D}(Rs, origin, step, variablenames, base, indextable)
+end
 
-grid_max(g::NewInherentDiscreteGrid) = _convert_to_scalar_if_possible(
-    grid_origin(g) .+ grid_step(g) .* (g.base .^ g.Rs .- 1),
-)
+function NewInherentDiscreteGrid(
+    variablenames::NTuple{D,Symbol},
+    indextable::Vector{Vector{Tuple{Symbol,Int}}};
+    origin=default_origin(Val(D)),
+    step=default_step(Val(D)),
+    base=2
+) where D
+    @assert all(Iterators.flatten(indextable)) do index
+        first(index) ∈ variablenames
+    end
 
-grid_step(g::NewInherentDiscreteGrid) = _convert_to_scalar_if_possible(g.step)
+    Rs = Tuple(map(variablenames) do variablename
+        count(index -> first(index) == variablename, Iterators.flatten(indextable))
+    end)
+
+    return NewInherentDiscreteGrid{D}(Rs, origin, step, variablenames, base, indextable)
+end
+
+function NewInherentDiscreteGrid(
+    variablenames::NTuple{D,Symbol},
+    Rs::NTuple{D,Int};
+    origin=default_origin(Val(D)),
+    step=default_step(Val(D)),
+    base=2,
+    unfoldingscheme=:fused
+) where {D}
+    origin = _to_tuple(Val(D), origin)
+    step = _to_tuple(Val(D), step)
+    indextable = _build_indextable(variablenames, Rs, unfoldingscheme)
+    return NewInherentDiscreteGrid{D}(Rs, origin, step, variablenames, base, indextable)
+end
+
+function NewInherentDiscreteGrid(Rs::NTuple{D,Int}; kwargs...) where {D}
+    variablenames = ntuple(Symbol, D)
+    return NewInherentDiscreteGrid(variablenames, Rs; kwargs...)
+end
+
+function NewInherentDiscreteGrid(R::Int, origin; kwargs...)
+    return NewInherentDiscreteGrid{1}(R, origin; kwargs...)
+end
+
+# ============================================================================
+# Basic property accessor functions
+# ============================================================================
+
+Base.ndims(::NewInherentDiscreteGrid{D}) where D = D
+
+Base.length(g::NewInherentDiscreteGrid) = length(g.indextable)
 
 grid_Rs(g::NewInherentDiscreteGrid) = g.Rs
 
@@ -293,8 +260,57 @@ grid_base(g::NewInherentDiscreteGrid) = g.base
 
 grid_variablenames(g::NewInherentDiscreteGrid) = g.variablenames
 
-function localdimensions(g::NewInherentDiscreteGrid)::Vector{Int}
-    return g.base .^ length.(g.indextable)
+grid_step(g::NewInherentDiscreteGrid) = _convert_to_scalar_if_possible(g.step)
+
+grid_origin(g::NewInherentDiscreteGrid) = _convert_to_scalar_if_possible(g.origin)
+
+function sitedim(g::NewInherentDiscreteGrid, site::Int)::Int
+    @assert site ∈ eachindex(g.indextable)
+    return g.base^length(g.indextable[site])
+end
+
+# ============================================================================
+# Grid coordinate functions
+# ============================================================================
+
+grid_min(g::NewInherentDiscreteGrid) = _convert_to_scalar_if_possible(g.origin)
+
+grid_max(g::NewInherentDiscreteGrid) = _convert_to_scalar_if_possible(
+    grid_origin(g) .+ grid_step(g) .* (g.base .^ g.Rs .- 1),
+)
+
+# ============================================================================
+# Core conversion functions
+# ============================================================================
+
+function quantics_to_grididx(g::NewInherentDiscreteGrid{D}, quantics::AbstractVector{Int}) where D
+    @assert length(quantics) == length(g)
+    @assert all(site -> quantics[site] ∈ 1:sitedim(g, site), eachindex(quantics))
+
+    result = if g.base == 2
+        _quantics_to_grididx_base2(g, quantics)
+    else
+        _quantics_to_grididx_general(g, quantics)
+    end
+
+    return _convert_to_scalar_if_possible(result)
+end
+
+function grididx_to_quantics(g::NewInherentDiscreteGrid{D}, grididx) where D
+    grididx_tuple = _to_tuple(Val(D), grididx)
+
+    @assert length(grididx_tuple) == D lazy"Grid index must have dimension $D, got $(length(grididx_tuple))"
+    @assert all(1 ≤ grididx_tuple[d] ≤ g.base^g.Rs[d] for d in 1:D) "Grid index out of bounds"
+
+    result = ones(Int, length(g.indextable))
+
+    if g.base == 2
+        _grididx_to_quantics_base2!(result, g, grididx_tuple)
+    else
+        _grididx_to_quantics_general!(result, g, grididx_tuple)
+    end
+
+    return result
 end
 
 function grididx_to_origcoord(g::NewInherentDiscreteGrid{D}, grididx) where D
@@ -305,7 +321,6 @@ function grididx_to_origcoord(g::NewInherentDiscreteGrid{D}, grididx) where D
 
     return _convert_to_scalar_if_possible(res)
 end
-
 
 function origcoord_to_grididx(g::NewInherentDiscreteGrid{D}, coordinate) where {D}
     coord_tuple = _to_tuple(Val(D), coordinate)
@@ -326,4 +341,12 @@ end
 
 function quantics_to_origcoord(g::NewInherentDiscreteGrid, quantics)
     grididx_to_origcoord(g, quantics_to_grididx(g, quantics))
+end
+
+# ============================================================================
+# Other utility functions
+# ============================================================================
+
+function localdimensions(g::NewInherentDiscreteGrid)::Vector{Int}
+    return g.base .^ length.(g.indextable)
 end
