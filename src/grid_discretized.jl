@@ -372,8 +372,8 @@ function Base.show(io::IO, ::MIME"text/plain", g::DiscretizedGrid{D}) where D
     end
 
     # Variable names (if meaningful)
-    if any(name -> !startswith(string(name), r"^\d+$"), g.variablenames)
-        var_str = join(g.variablenames, ", ")
+    if any(name -> !startswith(string(name), r"^\d+$"), grid_variablenames(g))
+        var_str = join(grid_variablenames(g), ", ")
         print(io, "\n├─ Variables: ($var_str)")
     end
 
@@ -381,18 +381,18 @@ function Base.show(io::IO, ::MIME"text/plain", g::DiscretizedGrid{D}) where D
     if D == 1
         print(io, "\n├─ Resolution: $(grid_Rs(g)[1]) bits")
     else
-        res_str = join(["$(g.variablenames[i]): $(grid_Rs(g)[i])" for i in 1:D], ", ")
+        res_str = join(["$(grid_variablenames(g)[i]): $(grid_Rs(g)[i])" for i in 1:D], ", ")
         print(io, "\n├─ Resolutions: ($res_str)")
     end
 
     # Bounds (only show if not default unit interval/square/cube)
     default_lower = default_lower_bound(Val(D))
     default_upper = default_upper_bound(Val(D))
-    if g.lower_bound != default_lower || any(abs.(g.upper_bound .- default_upper) .> 1e-10)
+    if lower_bound(g) != default_lower || any(abs.(upper_bound(g) .- default_upper) .> 1e-10)
         if D == 1
-            print(io, "\n├─ Domain: [$(g.lower_bound[1]), $(g.upper_bound[1]))")
+            print(io, "\n├─ Domain: [$(lower_bound(g)[1]), $(upper_bound(g)[1]))")
         else
-            bounds_str = join(["[$(g.lower_bound[i]), $(g.upper_bound[i]))" for i in 1:D], " × ")
+            bounds_str = join(["[$(lower_bound(g)[i]), $(upper_bound(g)[i]))" for i in 1:D], " × ")
             print(io, "\n├─ Domain: $bounds_str")
         end
 
@@ -401,7 +401,7 @@ function Base.show(io::IO, ::MIME"text/plain", g::DiscretizedGrid{D}) where D
         if D == 1
             print(io, "\n├─ Grid spacing: $(step_vals)")
         else
-            step_str = join(["Δ$(g.variablenames[i]) = $(step_vals[i])" for i in 1:D], ", ")
+            step_str = join(["Δ$(grid_variablenames(g)[i]) = $(step_vals[i])" for i in 1:D], ", ")
             print(io, "\n├─ Grid spacing: ($step_str)")
         end
     else
@@ -422,7 +422,7 @@ function Base.show(io::IO, ::MIME"text/plain", g::DiscretizedGrid{D}) where D
         if D == 1
             print(io, "\n├─ Grid spacing: $(step_vals)")
         else
-            step_str = join(["Δ$(g.variablenames[i]) = $(step_vals[i])" for i in 1:D], ", ")
+            step_str = join(["Δ$(grid_variablenames(g)[i]) = $(step_vals[i])" for i in 1:D], ", ")
             print(io, "\n├─ Grid spacing: ($step_str)")
         end
     end
