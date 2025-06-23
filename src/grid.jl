@@ -1,4 +1,4 @@
-struct InherentDiscreteGrid{D}
+struct InherentDiscreteGrid{D} <: Grid{D}
     Rs::NTuple{D,Int}
     origin::NTuple{D,Int}
     step::NTuple{D,Int}

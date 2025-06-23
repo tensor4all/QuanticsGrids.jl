@@ -84,7 +84,7 @@ DiscretizedGrid{2} with 8×512 = 4096 grid points
 ```
 In this case, variable names are automatically generated as `1`, `2`, etc.
 """
-struct DiscretizedGrid{D}
+struct DiscretizedGrid{D} <: Grid{D}
     discretegrid::InherentDiscreteGrid{D}
     lower_bound::NTuple{D,Float64}
     upper_bound::NTuple{D,Float64}
