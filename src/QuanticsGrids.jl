@@ -9,6 +9,7 @@ export origcoord_to_quantics, origcoord_to_grididx
 
 include("quantics.jl")
 include("grid.jl")
+include("newgrid_discrete.jl")
 include("newgrid.jl")
 
 end

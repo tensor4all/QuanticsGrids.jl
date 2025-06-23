@@ -96,7 +96,7 @@ end
     ]
 
     for grid in test_grids
-        max_idx = 2^grid.Rs[1]
+        max_idx = 2^QuanticsGrids.grid_Rs(grid)[1]
         # Test a representative sample of indices including edge cases
         test_indices = unique([1, 2, 3, max_idx ÷ 4, max_idx ÷ 2, 3 * max_idx ÷ 4, max_idx - 2, max_idx - 1, max_idx])
 

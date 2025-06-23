@@ -87,57 +87,34 @@ NewDiscretizedGrid{2} with 8×512 = 4096 grid points
 In this case, variable names are automatically generated as `1`, `2`, etc.
 """
 struct NewDiscretizedGrid{D}
-    Rs::NTuple{D,Int}
+    discretegrid::NewInherentDiscreteGrid{D}
     lower_bound::NTuple{D,Float64}
     upper_bound::NTuple{D,Float64}
-    variablenames::NTuple{D,Symbol}
-    base::Int
-    indextable::Vector{Vector{Tuple{Symbol,Int}}}
-    # Lookup table: lookup_table[variablename_index][bitnumber] -> (site_index, position_in_site)
-    lookup_table::NTuple{D,Vector{Tuple{Int,Int}}}
 
     function NewDiscretizedGrid{D}(
         Rs, lower_bound, upper_bound, variablenames, base, indextable, includeendpoint
     ) where {D}
+        discretegrid = NewInherentDiscreteGrid(variablenames, indextable; base)
+        lower_bound = _to_tuple(Val(D), lower_bound)
+        upper_bound = _to_tuple(Val(D), upper_bound)
+
         @assert all(>=(0), Rs)
         @assert all(lower_bound .< upper_bound)
         @assert base > 1
         @assert all(R -> rangecheck_R(R; base), Rs)
 
-        lookup_table = _build_lookup_table(Rs, indextable, variablenames, Val(D))
-
-        includeendpoint = _to_tuple(Val(D), includeendpoint)
-        @assert all(d -> nand(iszero(Rs[d]), includeendpoint[d]), 1:D)
-        lower_bound = _to_tuple(Val(D), lower_bound)
-        upper_bound = _to_tuple(Val(D), upper_bound)
-
         upper_bound = _adjust_upper_bounds(
             upper_bound, lower_bound, includeendpoint, base, Rs, Val(D)
         )
 
-        return new{D}(Rs, lower_bound, upper_bound, variablenames, base, indextable, lookup_table)
+        return new{D}(discretegrid, lower_bound, upper_bound)
     end
-end
-
-# Helper functions for constructor
-function _build_lookup_table(Rs, indextable, variablenames, ::Val{D}) where D
-    lookup_table = ntuple(D) do d
-        Vector{Tuple{Int,Int}}(undef, Rs[d])
-    end
-
-    for (site_idx, quanticsindices) in pairs(indextable)
-        for (pos_in_site, qindex) in pairs(quanticsindices)
-            variablename, bitnumber = qindex
-            var_idx = findfirst(==(variablename), variablenames)
-            isnothing(var_idx) && continue
-            lookup_table[var_idx][bitnumber] = (site_idx, pos_in_site)
-        end
-    end
-
-    return lookup_table
 end
 
 function _adjust_upper_bounds(upper_bound, lower_bound, includeendpoint, base, Rs, ::Val{D}) where D
+    includeendpoint = _to_tuple(Val(D), includeendpoint)
+    @assert all(d -> nand(iszero(Rs[d]), includeendpoint[d]), 1:D)
+
     return ntuple(D) do d
         if includeendpoint[d]
             upper_bound[d] + (upper_bound[d] - lower_bound[d]) / (base^Rs[d] - 1)
@@ -145,17 +122,6 @@ function _adjust_upper_bounds(upper_bound, lower_bound, includeendpoint, base, R
             upper_bound[d]
         end
     end
-end
-
-function rangecheck_R(R::Int; base::Int=2)::Bool
-    # For all gridindices from 1 to base^R to fit into an Int64,
-    # we must have base ^ R <= typemax(Int)
-    result = 1
-    for _ in 1:R
-        result <= typemax(Int) ÷ base || return false
-        result *= base
-    end
-    return true
 end
 
 function NewDiscretizedGrid(
@@ -176,44 +142,6 @@ function NewDiscretizedGrid(Rs::NTuple{D,Int}; kwargs...) where {D}
     return NewDiscretizedGrid(ntuple(Symbol, D), Rs; kwargs...)
 end
 
-function _build_indextable(variablenames::NTuple{D,Symbol}, Rs::NTuple{D,Int}, unfoldingscheme::Symbol) where D
-    indextable = Vector{Tuple{Symbol,Int}}[]
-
-    for bitnumber in 1:maximum(Rs)
-        if unfoldingscheme === :interleaved
-            _add_interleaved_indices!(indextable, variablenames, Rs, bitnumber)
-        elseif unfoldingscheme === :fused
-            _add_fused_indices!(indextable, variablenames, Rs, bitnumber)
-        else
-            throw(ArgumentError(lazy"""Unfolding scheme $unfoldingscheme not supported. Use :interleaved or :fused.
-            If you need a different scheme, please use the NewDiscretizedGrid(variablenames::NTuple{D,Symbol}, indextable::Vector{Vector{Tuple{Symbol,Int}}}) constructor."""))
-        end
-    end
-
-    return indextable
-end
-
-function _add_interleaved_indices!(indextable, variablenames::NTuple{D,Symbol}, Rs::NTuple{D,Int}, bitnumber) where D
-    for d in 1:D
-        bitnumber ∈ 1:Rs[d] || continue
-        qindex = (variablenames[d], bitnumber)
-        push!(indextable, [qindex])
-    end
-end
-
-function _add_fused_indices!(indextable, variablenames::NTuple{D,Symbol}, Rs::NTuple{D,Int}, bitnumber) where D
-    indices_bitnumber = Tuple{Symbol,Int}[]
-    # Add dimensions in reverse order to match DiscretizedGrid convention
-    # where the first dimension varies fastest in fused quantics
-    for d in D:-1:1
-        bitnumber ∈ 1:Rs[d] || continue
-        qindex = (variablenames[d], bitnumber)
-        push!(indices_bitnumber, qindex)
-    end
-    if !isempty(indices_bitnumber)
-        push!(indextable, indices_bitnumber)
-    end
-end
 
 function NewDiscretizedGrid{D}(
     R::Int,
@@ -221,7 +149,7 @@ function NewDiscretizedGrid{D}(
     upper_bound=default_upper_bound(Val(D));
     kwargs...
 ) where {D}
-    return NewDiscretizedGrid(ntuple(Returns(R), D); lower_bound, upper_bound, kwargs...)
+    return NewDiscretizedGrid(_to_tuple(Val(D), R); lower_bound, upper_bound, kwargs...)
 end
 
 function NewDiscretizedGrid(
@@ -247,124 +175,21 @@ function NewDiscretizedGrid(R::Int, lower_bound, upper_bound; kwargs...)
     NewDiscretizedGrid((R,); lower_bound=(lower_bound,), upper_bound=(upper_bound,), kwargs...)
 end
 
-default_lower_bound(::Val{D}) where D = ntuple(Returns(0.0), D)
+default_lower_bound(::Val{D}) where D = _to_tuple(Val(D), 0.0)
 
-default_upper_bound(::Val{D}) where D = ntuple(Returns(1.0), D)
-
-Base.ndims(::NewDiscretizedGrid{D}) where D = D
-
-Base.length(g::NewDiscretizedGrid) = length(g.indextable)
+default_upper_bound(::Val{D}) where D = _to_tuple(Val(D), 1.0)
 
 function sitedim(g::NewDiscretizedGrid, site::Int)::Int
-    @assert site ∈ eachindex(g.indextable)
-    return g.base^length(g.indextable[site])
+    @assert site ∈ eachindex(grid_indextable(g))
+    return grid_base(g)^length(grid_indextable(g)[site])
 end
 
-function quantics_to_grididx(g::NewDiscretizedGrid{D}, quantics::AbstractVector{Int}) where D
-    @assert length(quantics) == length(g)
-    @assert all(site -> quantics[site] ∈ 1:sitedim(g, site), eachindex(quantics))
-
-    result = if g.base == 2
-        _quantics_to_grididx_base2(g, quantics)
-    else
-        _quantics_to_grididx_general(g, quantics)
-    end
-
-    return _convert_to_scalar_if_possible(result)
+function quantics_to_grididx(g::NewDiscretizedGrid, quantics::AbstractVector{Int})
+    return quantics_to_grididx(g.discretegrid, quantics)
 end
 
-function _quantics_to_grididx_general(g::NewDiscretizedGrid{D}, quantics) where D
-    base = g.base
-
-    return ntuple(D) do d
-        grididx = 1
-        R_d = g.Rs[d]
-
-        for bitnumber in 1:R_d
-            site_idx, pos_in_site = g.lookup_table[d][bitnumber]
-            quantics_val = quantics[site_idx]
-            site_len = length(g.indextable[site_idx])
-
-            temp = quantics_val - 1
-            for _ in 1:(site_len-pos_in_site)
-                temp = div(temp, base)
-            end
-            digit = temp % base
-
-            grididx += digit * base^(R_d - bitnumber)
-        end
-        grididx
-    end
-end
-
-function _quantics_to_grididx_base2(g::NewDiscretizedGrid{D}, quantics) where D
-    return ntuple(D) do d
-        grididx = 0
-        R_d = g.Rs[d]
-
-        for bitnumber in 1:R_d
-            site_idx, pos_in_site = g.lookup_table[d][bitnumber]
-            bit_position = length(g.indextable[site_idx]) - pos_in_site
-            digit = ((quantics[site_idx] - 1) >> bit_position) & 1
-            grididx |= digit << (R_d - bitnumber)
-        end
-        grididx + 1
-    end
-end
-
-function grididx_to_quantics(g::NewDiscretizedGrid{D}, grididx) where D
-    grididx_tuple = _to_tuple(Val(D), grididx)
-
-    @assert length(grididx_tuple) == D lazy"Grid index must have dimension $D, got $(length(grididx_tuple))"
-    @assert all(1 ≤ grididx_tuple[d] ≤ g.base^g.Rs[d] for d in 1:D) "Grid index out of bounds"
-
-    result = ones(Int, length(g.indextable))
-
-    if g.base == 2
-        _grididx_to_quantics_base2!(result, g, grididx_tuple)
-    else
-        _grididx_to_quantics_general!(result, g, grididx_tuple)
-    end
-
-    return result
-end
-
-function _grididx_to_quantics_general!(result::Vector{Int}, g::NewDiscretizedGrid{D}, grididx::NTuple{D,Int}) where D
-    base = g.base
-
-    @inbounds for d in 1:D
-        zero_based_idx = grididx[d] - 1
-        R_d = g.Rs[d]
-
-        for bitnumber in 1:R_d
-            site_idx, pos_in_site = g.lookup_table[d][bitnumber]
-            site_length = length(g.indextable[site_idx])
-
-            bit_position = R_d - bitnumber
-            digit = (zero_based_idx ÷ (base^bit_position)) % base
-
-            power = site_length - pos_in_site
-            result[site_idx] += digit * (base^power)
-        end
-    end
-end
-
-function _grididx_to_quantics_base2!(result::Vector{Int}, g::NewDiscretizedGrid{D}, grididx::NTuple{D,Int}) where D
-    @inbounds for d in 1:D
-        zero_based_idx = grididx[d] - 1
-        R_d = g.Rs[d]
-
-        for bitnumber in 1:R_d
-            site_idx, pos_in_site = g.lookup_table[d][bitnumber]
-            site_length = length(g.indextable[site_idx])
-
-            bit_position = R_d - bitnumber
-            digit = (zero_based_idx >> bit_position) & 1
-
-            power = site_length - pos_in_site
-            result[site_idx] += digit << power
-        end
-    end
+function grididx_to_quantics(g::NewDiscretizedGrid, grididx)
+    return grididx_to_quantics(g.discretegrid, grididx)
 end
 
 grid_min(g::NewDiscretizedGrid) = _convert_to_scalar_if_possible(g.lower_bound)
@@ -372,33 +197,45 @@ grid_min(g::NewDiscretizedGrid) = _convert_to_scalar_if_possible(g.lower_bound)
 grid_max(g::NewDiscretizedGrid) = _convert_to_scalar_if_possible(g.upper_bound .- grid_step(g))
 
 grid_step(g::NewDiscretizedGrid) = _convert_to_scalar_if_possible(
-    (upper_bound(g) .- lower_bound(g)) ./ (g.base .^ g.Rs),
+    (upper_bound(g) .- lower_bound(g)) ./ (grid_base(g) .^ grid_Rs(g)),
 )
 
 upper_bound(g::NewDiscretizedGrid) = _convert_to_scalar_if_possible(g.upper_bound)
 
 lower_bound(g::NewDiscretizedGrid) = _convert_to_scalar_if_possible(g.lower_bound)
 
+Base.ndims(::NewDiscretizedGrid{D}) where D = D
+
+Base.length(g::NewDiscretizedGrid) = length(grid_indextable(g))
+
+grid_Rs(g::NewDiscretizedGrid{D}) where D = grid_Rs(g.discretegrid)
+
+grid_indextable(g::NewDiscretizedGrid{D}) where D = grid_indextable(g.discretegrid)
+
+grid_base(g::NewDiscretizedGrid{D}) where D = grid_base(g.discretegrid)
+
+grid_variablenames(g::NewDiscretizedGrid{D}) where D = grid_variablenames(g.discretegrid)
+
 function grid_origcoords(g::NewDiscretizedGrid, d::Int)
     @assert 1 ≤ d ≤ ndims(g) "Dimension $d out of bounds"
     start = grid_min(g)[d]
     stop = grid_max(g)[d]
-    length = g.base^g.Rs[d]
+    length = grid_base(g)^grid_Rs(g)[d]
     return range(start, stop, length)
 end
 
 function grid_origcoords(g::NewDiscretizedGrid, variablename::Symbol)
-    d = findfirst(==(variablename), g.variablenames)
-    isnothing(d) && throw(ArgumentError("Variable name :$variablename not found in grid. Available variables: $(g.variablenames)"))
+    d = findfirst(==(variablename), grid_variablenames(g))
+    isnothing(d) && throw(ArgumentError("Variable name :$variablename not found in grid. Available variables: $(grid_variablenames(g))"))
     return grid_origcoords(g, d)
 end
 
 function grididx_to_origcoord(g::NewDiscretizedGrid{D}, index) where {D}
     index_tuple = _to_tuple(Val(D), index)
-    @assert all(1 .<= index .<= (g.base .^ g.Rs)) lazy"Grid-index $index out of bounds [1, $(g.base .^ g.Rs)]"
+    @assert all(1 .<= index .<= (grid_base(g) .^ grid_Rs(g))) lazy"Grid-index $index out of bounds [1, $(grid_base(g) .^ grid_Rs(g))]"
 
     res = ntuple(D) do d
-        step_d = (g.upper_bound[d] - g.lower_bound[d]) / (g.base^g.Rs[d])
+        step_d = (g.upper_bound[d] - g.lower_bound[d]) / (grid_base(g)^grid_Rs(g)[d])
         g.lower_bound[d] + (index_tuple[d] - 1) * step_d
     end
 
@@ -420,7 +257,7 @@ function origcoord_to_grididx(g::NewDiscretizedGrid{D}, coordinate) where {D}
         continuous_idx = (target - bounds_lower[d]) / step_d + 1
 
         discrete_idx = round(Int, continuous_idx)
-        clamp(discrete_idx, 1, g.base^g.Rs[d])
+        clamp(discrete_idx, 1, grid_base(g)^grid_Rs(g)[d])
     end
 
     return _convert_to_scalar_if_possible(indices)
@@ -438,7 +275,7 @@ function quantics_to_origcoord(g::NewDiscretizedGrid{D}, quantics::AbstractVecto
 end
 
 function localdimensions(g::NewDiscretizedGrid)::Vector{Int}
-    return g.base .^ length.(g.indextable)
+    return grid_base(g) .^ length.(grid_indextable(g))
 end
 
 function quanticsfunction(::Type{T}, g::NewDiscretizedGrid, f::F)::Function where {T,F<:Function}
@@ -458,13 +295,13 @@ grid_origin(g::NewDiscretizedGrid) = lower_bound(g)
 
 function _handle_kwargs_input(g::NewDiscretizedGrid{D}; kwargs...) where {D}
     provided_keys = keys(kwargs)
-    expected_keys = g.variablenames
+    expected_keys = grid_variablenames(g)
     @assert Set(provided_keys) == Set(expected_keys) "Expected keyword arguments $(expected_keys), got $(tuple(provided_keys...))"
 
     @assert all(v -> v isa Real, values(kwargs)) "All keyword argument values must be Real numbers"
 
     return ntuple(D) do d
-        variablename = g.variablenames[d]
+        variablename = grid_variablenames(g)[d]
         kwargs[variablename]
     end
 end
@@ -493,11 +330,11 @@ function Base.show(io::IO, ::MIME"text/plain", g::NewDiscretizedGrid{D}) where D
     print(io, "NewDiscretizedGrid{$D}")
 
     # Grid resolution and total points
-    total_points = prod(g.base .^ g.Rs)
+    total_points = prod(grid_base(g) .^ grid_Rs(g))
     if D == 1
-        print(io, " with $(g.base^g.Rs[1]) grid points")
+        print(io, " with $(grid_base(g)^grid_Rs(g)[1]) grid points")
     else
-        print(io, " with $(join(g.base .^ g.Rs, "×")) = $total_points grid points")
+        print(io, " with $(join(grid_base(g) .^ grid_Rs(g), "×")) = $total_points grid points")
     end
 
     # Variable names (if meaningful)
@@ -508,15 +345,15 @@ function Base.show(io::IO, ::MIME"text/plain", g::NewDiscretizedGrid{D}) where D
 
     # Resolution per dimension
     if D == 1
-        print(io, "\n├─ Resolution: $(g.Rs[1]) bits")
+        print(io, "\n├─ Resolution: $(grid_Rs(g)[1]) bits")
     else
-        res_str = join(["$(g.variablenames[i]): $(g.Rs[i])" for i in 1:D], ", ")
+        res_str = join(["$(g.variablenames[i]): $(grid_Rs(g)[i])" for i in 1:D], ", ")
         print(io, "\n├─ Resolutions: ($res_str)")
     end
 
     # Bounds (only show if not default unit interval/square/cube)
-    default_lower = ntuple(Returns(0.0), D)
-    default_upper = ntuple(Returns(1.0), D)
+    default_lower = default_lower_bound(Val(D))
+    default_upper = default_upper_bound(Val(D))
     if g.lower_bound != default_lower || any(abs.(g.upper_bound .- default_upper) .> 1e-10)
         if D == 1
             print(io, "\n├─ Domain: [$(g.lower_bound[1]), $(g.upper_bound[1]))")
@@ -557,13 +394,13 @@ function Base.show(io::IO, ::MIME"text/plain", g::NewDiscretizedGrid{D}) where D
     end
 
     # Base (only show if not binary)
-    if g.base != 2
-        print(io, "\n├─ Base: $(g.base)")
+    if grid_base(g) != 2
+        print(io, "\n├─ Base: $(grid_base(g))")
     end
 
     # Tensor structure summary
-    num_sites = length(g.indextable)
-    site_dims = [g.base^length(site) for site in g.indextable]
+    num_sites = length(grid_indextable(g))
+    site_dims = [grid_base(g)^length(site) for site in grid_indextable(g)]
     max_bond_dim = maximum(site_dims)
 
     print(io, "\n└─ Tensor train: $num_sites sites")
@@ -575,10 +412,10 @@ function Base.show(io::IO, ::MIME"text/plain", g::NewDiscretizedGrid{D}) where D
 end
 
 function Base.show(io::IO, g::NewDiscretizedGrid{D}) where D
-    total_points = prod(g.base .^ g.Rs)
+    total_points = prod(grid_base(g) .^ grid_Rs(g))
     if D == 1
-        print(io, "NewDiscretizedGrid{$D}($(g.base^g.Rs[1]) points)")
+        print(io, "NewDiscretizedGrid{$D}($(grid_base(g)^grid_Rs(g)[1]) points)")
     else
-        print(io, "NewDiscretizedGrid{$D}($(join(g.base .^ g.Rs, "×")) points)")
+        print(io, "NewDiscretizedGrid{$D}($(join(grid_base(g) .^ grid_Rs(g), "×")) points)")
     end
 end

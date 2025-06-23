@@ -517,7 +517,7 @@ end
 
 @testitem "NewDiscretizedGrid(R::Int, lower_bound, upper_bound) constructor" begin
     grid = NewDiscretizedGrid(3, -2.0, 3.0)
-    @test grid.Rs == (3,)
-    @test grid.lower_bound == (-2.0,)
-    @test grid.upper_bound == (3.0,)
+    @test QuanticsGrids.grid_Rs(grid) == (3,)
+    @test QuanticsGrids.lower_bound(grid) == -2.0
+    @test QuanticsGrids.upper_bound(grid) == 3.0
 end

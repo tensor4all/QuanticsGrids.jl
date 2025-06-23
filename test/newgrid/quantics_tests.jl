@@ -1,20 +1,20 @@
 @testitem "constructor, square grid" begin
     grid = NewDiscretizedGrid{2}(10; unfoldingscheme=:interleaved)
-    @test grid.Rs == (10, 10)
-    @test only(grid.indextable[1])[1] == Symbol(1)
-    @test only(grid.indextable[1])[2] == 1
-    @test only(grid.indextable[2])[1] == Symbol(2)
-    @test only(grid.indextable[2])[2] == 1
+    @test QuanticsGrids.grid_Rs(grid) == (10, 10)
+    @test only(QuanticsGrids.grid_indextable(grid)[1])[1] == Symbol(1)
+    @test only(QuanticsGrids.grid_indextable(grid)[1])[2] == 1
+    @test only(QuanticsGrids.grid_indextable(grid)[2])[1] == Symbol(2)
+    @test only(QuanticsGrids.grid_indextable(grid)[2])[2] == 1
 end
 
 @testitem "constructor, rectangular grid" begin
     grid = NewDiscretizedGrid((3, 5); unfoldingscheme=:interleaved)
-    @test only(grid.indextable[6])[1] == Symbol(2)
-    @test only(grid.indextable[6])[2] == 3
-    @test only(grid.indextable[7])[1] == Symbol(2)
-    @test only(grid.indextable[7])[2] == 4
-    @test only(grid.indextable[8])[1] == Symbol(2)
-    @test only(grid.indextable[8])[2] == 5
+    @test only(QuanticsGrids.grid_indextable(grid)[6])[1] == Symbol(2)
+    @test only(QuanticsGrids.grid_indextable(grid)[6])[2] == 3
+    @test only(QuanticsGrids.grid_indextable(grid)[7])[1] == Symbol(2)
+    @test only(QuanticsGrids.grid_indextable(grid)[7])[2] == 4
+    @test only(QuanticsGrids.grid_indextable(grid)[8])[1] == Symbol(2)
+    @test only(QuanticsGrids.grid_indextable(grid)[8])[2] == 5
 end
 
 @testitem "quantics_to_grididx, rectangular grid" begin
@@ -30,7 +30,7 @@ end
 @testitem "quantics_to_grididx ∘ grididx_to_quantics == identity" begin
     grid = NewDiscretizedGrid((5, 3, 17); base=13)
     for _ in 1:100
-        grididx = ntuple(d -> rand(1:grid.Rs[d]), ndims(grid))
+        grididx = ntuple(d -> rand(1:QuanticsGrids.grid_Rs(grid)[d]), ndims(grid))
         @test quantics_to_grididx(grid, grididx_to_quantics(grid, grididx)) == grididx
     end
 end
@@ -54,10 +54,10 @@ end
 
 @testitem "ctor from indextable" begin
     grid = NewDiscretizedGrid((:a, :b, :c), [[(:a, 4)], [(:a, 3)], [(:a, 2)], [(:a, 1)], [(:b, 1)], [(:b, 2)], [(:b, 3)], [(:c, 1)], [(:c, 2)], [(:c, 3)]])
-    @test grid.Rs == (4, 3, 3)
-    @test grid.lower_bound == (0.0, 0.0, 0.0)
-    @test grid.upper_bound == (1.0, 1.0, 1.0)
-    @test grid.variablenames == (:a, :b, :c)
+    @test QuanticsGrids.grid_Rs(grid) == (4, 3, 3)
+    @test QuanticsGrids.lower_bound(grid) == (0.0, 0.0, 0.0)
+    @test QuanticsGrids.upper_bound(grid) == (1.0, 1.0, 1.0)
+    @test grid.discretegrid.variablenames == (:a, :b, :c)
 end
 
 @testitem "ctor from indextable, quantics <-> grididx" begin
@@ -94,7 +94,7 @@ end
         quantics = rand(1:3, length(grid))
         grididx = quantics_to_grididx(grid, quantics)
         @test grididx_to_quantics(grid, grididx) == quantics
-        @test all(1 .<= grididx .<= (3 .^ grid.Rs))
+        @test all(1 .<= grididx .<= (3 .^ QuanticsGrids.grid_Rs(grid)))
     end
 
     # Test with base 5
@@ -188,7 +188,7 @@ end
 
         # Verify all grid indices are within bounds
         for d in 1:8
-            @test 1 <= grididx[d] <= 3^grid.Rs[d]
+            @test 1 <= grididx[d] <= 3^QuanticsGrids.grid_Rs(grid)[d]
         end
     end
 end
@@ -233,7 +233,7 @@ end
         @test recovered == quantics
 
         # Verify grid indices are reasonable
-        @test all(1 .<= grididx .<= (3 .^ grid.Rs))
+        @test all(1 .<= grididx .<= (3 .^ QuanticsGrids.grid_Rs(grid)))
     end
 end
 

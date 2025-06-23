@@ -218,7 +218,7 @@ end
         quantics = rand(1:max_base, length(grid))
         grididx = quantics_to_grididx(grid, quantics)
         @test grididx_to_quantics(grid, grididx) == quantics
-        @test all(1 .<= grididx .<= (max_base .^ grid.Rs))
+        @test all(1 .<= grididx .<= (max_base .^ QuanticsGrids.grid_Rs(grid)))
     end
 
     # Test with base=2 (edge case, minimum valid base)

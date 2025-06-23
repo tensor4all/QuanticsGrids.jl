@@ -19,11 +19,11 @@
 
     @test ndims(grid) == 4
     @test length(grid) == 7
-    @test grid.base == 3
-    @test grid.variablenames == variablenames
+    @test QuanticsGrids.grid_base(grid) == 3
+    @test QuanticsGrids.grid_variablenames(grid) == variablenames
 
     expected_Rs = (4, 4, 4, 4)
-    @test grid.Rs == expected_Rs
+    @test QuanticsGrids.grid_Rs(grid) == expected_Rs
 
     expected_localdims = [27, 3, 81, 9, 3, 9, 27]
     @test QuanticsGrids.localdimensions(grid) == expected_localdims
@@ -48,7 +48,7 @@
 
     @test all(gmax .≈ upper_bound)
 
-    expected_steps = (ub .- lb) ./ (base .^ grid.Rs)
+    expected_steps = (ub .- lb) ./ (base .^ QuanticsGrids.grid_Rs(grid))
     @test all(gstep .≈ expected_steps)
 
     corner_indices = [
@@ -90,7 +90,7 @@
         @test back_to_quantics == random_quantics
         @test all(back_to_origcoord .≈ origcoord)
 
-        @test all(1 .<= grididx .<= (base .^ grid.Rs))
+        @test all(1 .<= grididx .<= (base .^ QuanticsGrids.grid_Rs(grid)))
         @test all(lb .<= origcoord .<= ub)
         @test length(back_to_quantics) == length(grid)
     end
@@ -116,7 +116,7 @@
         coord_inside = ntuple(j -> j == i ? lb[j] + epsilon : (lb[j] + ub[j]) / 2, 4)
         if all(lb .<= coord_inside .<= ub)
             grididx = QuanticsGrids.origcoord_to_grididx(grid, coord_inside)
-            @test all(1 .<= grididx .<= (base .^ grid.Rs))
+            @test all(1 .<= grididx .<= (base .^ QuanticsGrids.grid_Rs(grid)))
         end
     end
 
@@ -159,13 +159,13 @@
     end
 
     simple_grid = NewDiscretizedGrid((3, 4); base=5, lower_bound=(0.0, -1.0), upper_bound=(1.0, 1.0), unfoldingscheme=:interleaved)
-    @test simple_grid.Rs == (3, 4)
-    @test simple_grid.base == 5
+    @test QuanticsGrids.grid_Rs(simple_grid) == (3, 4)
+    @test QuanticsGrids.grid_base(simple_grid) == 5
     @test QuanticsGrids.localdimensions(simple_grid) == [5, 5, 5, 5, 5, 5, 5]
 
     grid_1d = NewDiscretizedGrid{1}(8; base=2, lower_bound=(-5.0,), upper_bound=(10.0,))
     @test ndims(grid_1d) == 1
-    @test grid_1d.Rs == (8,)
+    @test QuanticsGrids.grid_Rs(grid_1d) == (8,)
 
     for i in [1, 100, 256]
         coord = grididx_to_origcoord(grid_1d, i)
@@ -180,7 +180,7 @@
     @test length(grid_fused) == 3
     @test length(grid_interleaved) == 6
 
-    @test grid_fused.Rs == grid_interleaved.Rs
+    @test QuanticsGrids.grid_Rs(grid_fused) == QuanticsGrids.grid_Rs(grid_interleaved)
 
     test_grididx = (4, 6)
     coord_fused = grididx_to_origcoord(grid_fused, test_grididx)
@@ -193,7 +193,7 @@
     extreme_indices = [1, max_idx ÷ 2, max_idx - 1, max_idx]
     for idx in extreme_indices
         grididx = (idx, idx)
-        if all(1 .<= grididx .<= (2, 2) .^ large_grid.Rs)
+        if all(1 .<= grididx .<= (2, 2) .^ QuanticsGrids.grid_Rs(large_grid))
             quantics = grididx_to_quantics(large_grid, grididx)
             recovered_grididx = quantics_to_grididx(large_grid, quantics)
             @test recovered_grididx == grididx
@@ -221,8 +221,8 @@
     @test all(isfinite.(QuanticsGrids.upper_bound(grid)))
     @test all(QuanticsGrids.grid_step(grid) .> 0)
 
-    @test length(grid.lookup_table) == 4
-    @test all(length(grid.lookup_table[d]) == grid.Rs[d] for d in 1:4)
+    @test length(grid.discretegrid.lookup_table) == 4
+    @test all(length(grid.discretegrid.lookup_table[d]) == QuanticsGrids.grid_Rs(grid)[d] for d in 1:4)
 
     base2_grid = NewDiscretizedGrid((5, 3); base=2, lower_bound=(0.0, -1.0), upper_bound=(3.0, 2.0))
 
@@ -314,9 +314,9 @@
 
         # Test with default parameters
         grid1 = NewDiscretizedGrid(variablenames, Rs)
-        @test grid1.variablenames == variablenames
-        @test grid1.Rs == Rs
-        @test grid1.base == 2  # default base
+        @test QuanticsGrids.grid_variablenames(grid1) == variablenames
+        @test QuanticsGrids.grid_Rs(grid1) == Rs
+        @test QuanticsGrids.grid_base(grid1) == 2  # default base
         @test ndims(grid1) == 3
 
         # Test with custom parameters
@@ -331,9 +331,9 @@
             unfoldingscheme=:fused,
             includeendpoint=true)
 
-        @test grid2.variablenames == variablenames
-        @test grid2.Rs == Rs
-        @test grid2.base == base
+        @test QuanticsGrids.grid_variablenames(grid2) == variablenames
+        @test QuanticsGrids.grid_Rs(grid2) == Rs
+        @test QuanticsGrids.grid_base(grid2) == base
         @test QuanticsGrids.lower_bound(grid2) == lower_bound
 
         # Test basic functionality works
@@ -350,8 +350,8 @@
         grid3 = NewDiscretizedGrid(variablenames_tuple, Rs_tuple;
             includeendpoint=includeendpoint_tuple)
 
-        @test grid3.variablenames == variablenames_tuple
-        @test grid3.Rs == Rs_tuple
+        @test QuanticsGrids.grid_variablenames(grid3) == variablenames_tuple
+        @test QuanticsGrids.grid_Rs(grid3) == Rs_tuple
 
         # Test that upper bounds are adjusted correctly for each dimension
         lb3 = QuanticsGrids.lower_bound(grid3)
