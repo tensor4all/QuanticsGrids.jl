@@ -1,23 +1,13 @@
 @testitem "Code quality (Aqua.jl)" begin
     using Aqua
 
-    import QuanticsGrids
-
-    @testset "Code quality (Aqua.jl)" begin
-        Aqua.test_all(QuanticsGrids; unbound_args = false, deps_compat = false)
-    end
-
+    Aqua.test_all(QuanticsGrids; deps_compat=false)
 end
 
 @testitem "Code linting (JET.jl)" begin
-    using Test
     using JET
 
-    import QuanticsGrids
-
     if VERSION >= v"1.10"
-        @testset "Code linting (JET.jl)" begin
-            JET.test_package(QuanticsGrids; target_defined_modules = true)
-        end
+        JET.test_package(QuanticsGrids; target_defined_modules=true)
     end
 end

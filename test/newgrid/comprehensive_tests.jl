@@ -397,3 +397,8 @@ end
         includeendpoint=(true, true, true, ntuple(Returns(false), ndims)..., ntuple(Returns(false), ndims)..., ntuple(Returns(false), ndims)...))
     @test origcoord_to_quantics(grid, 0.0) == [1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
 end
+
+@testitem "Additional Constructors" begin
+    g = DiscretizedGrid{2}((3, 4), (-2, 3), (4, 5); unfoldingscheme=:interleaved)
+    g = DiscretizedGrid((3, 4), (-2, 3), (4, 5); unfoldingscheme=:interleaved)
+end

@@ -163,7 +163,7 @@ function DiscretizedGrid(Rs::NTuple{D,Int}; kwargs...) where {D}
 end
 
 function DiscretizedGrid{D}(
-    R::Int,
+    R,
     lower_bound=default_lower_bound(Val(D)),
     upper_bound=default_upper_bound(Val(D));
     kwargs...
@@ -172,7 +172,7 @@ function DiscretizedGrid{D}(
 end
 
 function DiscretizedGrid(
-    R::Int,
+    R,
     lower_bound::NTuple{D,Real},
     upper_bound::NTuple{D,Real};
     kwargs...

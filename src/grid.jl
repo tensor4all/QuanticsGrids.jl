@@ -36,7 +36,7 @@ end
 _convert_to_scalar_if_possible(x) = x
 _convert_to_scalar_if_possible(x::NTuple{1,T}) where {T} = first(x)
 
-_to_tuple(::Val{d}, x::NTuple{d,T}) where {d,T} = x
+_to_tuple(::Val{d}, x::NTuple{d}) where {d} = x
 _to_tuple(::Val{d}, x) where {d} = ntuple(i -> x, d)
 
 default_step(::Val{D}) where D = ntuple(Returns(1), D)
