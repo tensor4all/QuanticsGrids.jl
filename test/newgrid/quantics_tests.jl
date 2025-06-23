@@ -1,5 +1,5 @@
 @testitem "constructor, square grid" begin
-    grid = NewDiscretizedGrid{2}(10; unfoldingscheme=:interleaved)
+    grid = DiscretizedGrid{2}(10; unfoldingscheme=:interleaved)
     @test QuanticsGrids.grid_Rs(grid) == (10, 10)
     @test only(QuanticsGrids.grid_indextable(grid)[1])[1] == Symbol(1)
     @test only(QuanticsGrids.grid_indextable(grid)[1])[2] == 1
@@ -8,7 +8,7 @@
 end
 
 @testitem "constructor, rectangular grid" begin
-    grid = NewDiscretizedGrid((3, 5); unfoldingscheme=:interleaved)
+    grid = DiscretizedGrid((3, 5); unfoldingscheme=:interleaved)
     @test only(QuanticsGrids.grid_indextable(grid)[6])[1] == Symbol(2)
     @test only(QuanticsGrids.grid_indextable(grid)[6])[2] == 3
     @test only(QuanticsGrids.grid_indextable(grid)[7])[1] == Symbol(2)
@@ -18,17 +18,17 @@ end
 end
 
 @testitem "quantics_to_grididx, rectangular grid" begin
-    grid = NewDiscretizedGrid((3, 5); unfoldingscheme=:interleaved)
+    grid = DiscretizedGrid((3, 5); unfoldingscheme=:interleaved)
     @test quantics_to_grididx(grid, [1, 2, 1, 2, 1, 2, 1, 2]) == (1, 30)
 end
 
 @testitem "grididx_to_quantics, rectangular grid" begin
-    grid = NewDiscretizedGrid((3, 5); unfoldingscheme=:interleaved)
+    grid = DiscretizedGrid((3, 5); unfoldingscheme=:interleaved)
     @test grididx_to_quantics(grid, (1, 30)) == [1, 2, 1, 2, 1, 2, 1, 2]
 end
 
 @testitem "quantics_to_grididx ∘ grididx_to_quantics == identity" begin
-    grid = NewDiscretizedGrid((5, 3, 17); base=13)
+    grid = DiscretizedGrid((5, 3, 17); base=13)
     for _ in 1:100
         grididx = ntuple(d -> rand(1:QuanticsGrids.grid_Rs(grid)[d]), ndims(grid))
         @test quantics_to_grididx(grid, grididx_to_quantics(grid, grididx)) == grididx
@@ -36,7 +36,7 @@ end
 end
 
 @testitem "grididx_to_quantics ∘ quantics_to_grididx == identity" begin
-    grid = NewDiscretizedGrid((48, 31, 62))
+    grid = DiscretizedGrid((48, 31, 62))
     for _ in 1:100
         quantics = rand(1:2, length(grid))
         @test grididx_to_quantics(grid, quantics_to_grididx(grid, quantics)) == quantics
@@ -45,7 +45,7 @@ end
 
 @testitem "grididx_to_quantics ∘ quantics_to_grididx == identity, base != 2" begin
     base = 7
-    grid = NewDiscretizedGrid((22, 9, 14); base)
+    grid = DiscretizedGrid((22, 9, 14); base)
     for _ in 1:100
         quantics = rand(1:base, length(grid))
         @test grididx_to_quantics(grid, quantics_to_grididx(grid, quantics)) == quantics
@@ -53,7 +53,7 @@ end
 end
 
 @testitem "ctor from indextable" begin
-    grid = NewDiscretizedGrid((:a, :b, :c), [[(:a, 4)], [(:a, 3)], [(:a, 2)], [(:a, 1)], [(:b, 1)], [(:b, 2)], [(:b, 3)], [(:c, 1)], [(:c, 2)], [(:c, 3)]])
+    grid = DiscretizedGrid((:a, :b, :c), [[(:a, 4)], [(:a, 3)], [(:a, 2)], [(:a, 1)], [(:b, 1)], [(:b, 2)], [(:b, 3)], [(:c, 1)], [(:c, 2)], [(:c, 3)]])
     @test QuanticsGrids.grid_Rs(grid) == (4, 3, 3)
     @test QuanticsGrids.lower_bound(grid) == (0.0, 0.0, 0.0)
     @test QuanticsGrids.upper_bound(grid) == (1.0, 1.0, 1.0)
@@ -61,20 +61,20 @@ end
 end
 
 @testitem "ctor from indextable, quantics <-> grididx" begin
-    grid = NewDiscretizedGrid((:a, :b, :c), [[(:a, 4)], [(:a, 3)], [(:a, 2)], [(:a, 1)], [(:b, 1)], [(:b, 2)], [(:b, 3)], [(:c, 1)], [(:c, 2)], [(:c, 3)]])
+    grid = DiscretizedGrid((:a, :b, :c), [[(:a, 4)], [(:a, 3)], [(:a, 2)], [(:a, 1)], [(:b, 1)], [(:b, 2)], [(:b, 3)], [(:c, 1)], [(:c, 2)], [(:c, 3)]])
     @test quantics_to_grididx(grid, [1, 2, 1, 2, 1, 2, 1, 2, 1, 2]) == (11, 3, 6)
     @test grididx_to_quantics(grid, (11, 3, 6)) == [1, 2, 1, 2, 1, 2, 1, 2, 1, 2]
 end
 
 @testitem "ctor from indextable, quantics <-> grididx, fused indices" begin
-    grid = NewDiscretizedGrid((:a, :b, :c, :d), [[(:a, 4)], [(:a, 3)], [(:a, 2)], [(:a, 1)], [(:b, 1), (:d, 1)], [(:b, 2)], [(:b, 3)], [(:c, 1), (:d, 2)], [(:c, 2)], [(:c, 3)]])
+    grid = DiscretizedGrid((:a, :b, :c, :d), [[(:a, 4)], [(:a, 3)], [(:a, 2)], [(:a, 1)], [(:b, 1), (:d, 1)], [(:b, 2)], [(:b, 3)], [(:c, 1), (:d, 2)], [(:c, 2)], [(:c, 3)]])
     @test quantics_to_grididx(grid, [1, 2, 1, 2, 2, 2, 1, 4, 1, 2]) == (11, 3, 6, 4)
     @test grididx_to_quantics(grid, (11, 3, 6, 4)) == [1, 2, 1, 2, 2, 2, 1, 4, 1, 2]
 end
 
 @testitem "challenging tests - extreme edge cases" begin
     # Test with minimum valid grididx (all 1s)
-    grid = NewDiscretizedGrid((10, 5, 8); unfoldingscheme=:interleaved)
+    grid = DiscretizedGrid((10, 5, 8); unfoldingscheme=:interleaved)
     min_grididx = (1, 1, 1)
     quantics = grididx_to_quantics(grid, min_grididx)
     @test all(q -> q == 1, quantics)
@@ -89,7 +89,7 @@ end
 
 @testitem "challenging tests - mixed bases" begin
     # Test with base 3
-    grid = NewDiscretizedGrid((4, 6, 3); base=3)
+    grid = DiscretizedGrid((4, 6, 3); base=3)
     for _ in 1:50
         quantics = rand(1:3, length(grid))
         grididx = quantics_to_grididx(grid, quantics)
@@ -98,7 +98,7 @@ end
     end
 
     # Test with base 5
-    grid = NewDiscretizedGrid((3, 4); base=5, unfoldingscheme=:interleaved)
+    grid = DiscretizedGrid((3, 4); base=5, unfoldingscheme=:interleaved)
     for _ in 1:50
         grididx = (rand(1:5^3), rand(1:5^4))
         quantics = grididx_to_quantics(grid, grididx)
@@ -109,7 +109,7 @@ end
 
 @testitem "challenging tests - complex fused indices" begin
     # Multiple variables fused in single sites
-    grid = NewDiscretizedGrid(
+    grid = DiscretizedGrid(
         (:x, :y, :z),
         [
             [(:x, 3), (:y, 2), (:z, 1)],  # 3 variables in one site
@@ -140,7 +140,7 @@ end
 
 @testitem "challenging tests - asymmetric grids" begin
     # Very asymmetric grid dimensions
-    grid = NewDiscretizedGrid((20, 0, 15, 3))
+    grid = DiscretizedGrid((20, 0, 15, 3))
 
     for _ in 1:50
         # Test boundary conditions
@@ -158,7 +158,7 @@ end
 
 @testitem "challenging tests - single dimension edge cases" begin
     # 1D grid with large R
-    grid = NewDiscretizedGrid((25,))
+    grid = DiscretizedGrid((25,))
 
     # Test extremes
     min_quantics = ones(Int, 25)
@@ -179,7 +179,7 @@ end
 
 @testitem "challenging tests - high dimensional grids" begin
     # 8D grid with moderate R values
-    grid = NewDiscretizedGrid(ntuple(i -> 4 + (i % 3), 8); base=3)
+    grid = DiscretizedGrid(ntuple(i -> 4 + (i % 3), 8); base=3)
 
     for _ in 1:30
         quantics = rand(1:3, length(grid))
@@ -195,7 +195,7 @@ end
 
 @testitem "challenging tests - stress test with complex patterns" begin
     # Grid with intentionally complex index table structure
-    grid = NewDiscretizedGrid(
+    grid = DiscretizedGrid(
         (:a, :b, :c, :d, :e),
         [
             [(:e, 1)],                           # site 1
@@ -248,7 +248,7 @@ end
 
     # Create equivalent grids
     old_grid = DiscretizedGrid{2}(R, lower, upper; unfoldingscheme=:fused)
-    new_grid = NewDiscretizedGrid((R, R); lower_bound=lower, upper_bound=upper, unfoldingscheme=:fused)
+    new_grid = DiscretizedGrid((R, R); lower_bound=lower, upper_bound=upper, unfoldingscheme=:fused)
 
     # Test specific quantics vectors that revealed the ordering issue
     test_cases = [
@@ -285,7 +285,7 @@ end
     upper_3d = (1.0, 1.0, 1.0)
 
     old_grid_3d = DiscretizedGrid{3}(R_3d, lower_3d, upper_3d; unfoldingscheme=:fused)
-    new_grid_3d = NewDiscretizedGrid((R_3d, R_3d, R_3d); lower_bound=lower_3d, upper_bound=upper_3d, unfoldingscheme=:fused)
+    new_grid_3d = DiscretizedGrid((R_3d, R_3d, R_3d); lower_bound=lower_3d, upper_bound=upper_3d, unfoldingscheme=:fused)
 
     # Test several 3D quantics vectors
     test_cases_3d = [

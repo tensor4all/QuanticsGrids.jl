@@ -1,5 +1,5 @@
 @testitem "origcoord functions - basic 1D grid" begin
-    grid = NewDiscretizedGrid((4,); lower_bound=(0.0,), upper_bound=(1.0,))
+    grid = DiscretizedGrid((4,); lower_bound=(0.0,), upper_bound=(1.0,))
 
     # Test grididx <-> origcoord conversion
     @test grididx_to_origcoord(grid, (1,)) == 0.0
@@ -23,7 +23,7 @@
 end
 
 @testitem "origcoord functions - 2D grid" begin
-    grid = NewDiscretizedGrid((3, 4); lower_bound=(0.0, 1.0), upper_bound=(2.0, 3.0))
+    grid = DiscretizedGrid((3, 4); lower_bound=(0.0, 1.0), upper_bound=(2.0, 3.0))
 
     # Test boundary values
     @test grididx_to_origcoord(grid, (1, 1)) == (0.0, 1.0)
@@ -44,7 +44,7 @@ end
 
 @testitem "origcoord functions - different base" begin
     base = 3
-    grid = NewDiscretizedGrid((2, 3); base=base, lower_bound=(-1.0, 0.0), upper_bound=(1.0, 6.0))
+    grid = DiscretizedGrid((2, 3); base=base, lower_bound=(-1.0, 0.0), upper_bound=(1.0, 6.0))
 
     # Test boundary values  
     @test grididx_to_origcoord(grid, (1, 1)) == (-1.0, 0.0)
@@ -69,7 +69,7 @@ end
 end
 
 @testitem "origcoord functions - boundary checking" begin
-    grid = NewDiscretizedGrid((2, 2); lower_bound=(0.0, 0.0), upper_bound=(1.0, 1.0))
+    grid = DiscretizedGrid((2, 2); lower_bound=(0.0, 0.0), upper_bound=(1.0, 1.0))
 
     # Test coordinates within bounds
     @test QuanticsGrids.origcoord_to_grididx(grid, (0.0, 0.0)) == (1, 1)
@@ -87,7 +87,7 @@ end
 
 @testitem "origcoord functions - fused indices grid" begin
     # Test with a more complex grid that has fused indices
-    grid = NewDiscretizedGrid(
+    grid = DiscretizedGrid(
         (:x, :y),
         [[(:x, 2), (:y, 1)], [(:x, 1)], [(:y, 2)]];
         lower_bound=(0.0, -1.0),
@@ -109,7 +109,7 @@ end
 
 @testitem "origcoord functions - stress test" begin
     # Test high-dimensional grids
-    grid = NewDiscretizedGrid((2, 3, 2, 4); base=2,
+    grid = DiscretizedGrid((2, 3, 2, 4); base=2,
         lower_bound=(0.0, -2.0, 1.0, -5.0),
         upper_bound=(1.0, 2.0, 3.0, 5.0))
 
@@ -131,7 +131,7 @@ end
 
 @testitem "edge cases - numerical precision and floating point" begin
     # Test with very small grid steps that might cause floating point issues
-    grid = NewDiscretizedGrid((30, 25);
+    grid = DiscretizedGrid((30, 25);
         lower_bound=(1e-15, -1e-15),
         upper_bound=(1e-14, 1e-14))
 
@@ -153,7 +153,7 @@ end
     # Test with largest R values that still fit in computation
     # R=60 gives 2^60 ≈ 1.15e18, near but below Int64 max (9.22e18)
     large_R = 58  # Be conservative to avoid overflow
-    grid = NewDiscretizedGrid((large_R,))
+    grid = DiscretizedGrid((large_R,))
 
     # Test extreme indices
     min_quantics = ones(Int, large_R)
@@ -174,7 +174,7 @@ end
 
 @testitem "edge cases - degenerate grids with R=0" begin
     # Grid with all R=0 (should only have one grid point each)
-    grid = NewDiscretizedGrid((0, 0, 0))
+    grid = DiscretizedGrid((0, 0, 0))
 
     # Only valid grid index should be (1, 1, 1)
     @test grididx_to_quantics(grid, (1, 1, 1)) == Int[]
@@ -187,7 +187,7 @@ end
 
 @testitem "edge cases - mixed R values including zeros" begin
     # Grid with mix of zero and non-zero R values
-    grid = NewDiscretizedGrid((0, 5, 0, 3, 0); unfoldingscheme=:interleaved)
+    grid = DiscretizedGrid((0, 5, 0, 3, 0); unfoldingscheme=:interleaved)
 
     # Test conversion with valid quantics length
     quantics = [1, 2, 1, 2, 1, 2, 1, 2]  # Only bits for dimensions with R>0
@@ -212,7 +212,7 @@ end
 @testitem "edge cases - extreme base values" begin
     # Test with maximum reasonable base
     max_base = 16
-    grid = NewDiscretizedGrid((3, 4); base=max_base)
+    grid = DiscretizedGrid((3, 4); base=max_base)
 
     for _ in 1:20
         quantics = rand(1:max_base, length(grid))
@@ -222,7 +222,7 @@ end
     end
 
     # Test with base=2 (edge case, minimum valid base)
-    grid2 = NewDiscretizedGrid((10, 8); base=2)
+    grid2 = DiscretizedGrid((10, 8); base=2)
     for _ in 1:20
         quantics = rand(1:2, length(grid2))
         grididx = quantics_to_grididx(grid2, quantics)
@@ -232,7 +232,7 @@ end
 
 @testitem "edge cases - extreme coordinate ranges" begin
     # Test with very large coordinate ranges
-    grid = NewDiscretizedGrid((10, 8);
+    grid = DiscretizedGrid((10, 8);
         lower_bound=(-1e10, -1e15),
         upper_bound=(1e10, 1e15))
 
@@ -243,7 +243,7 @@ end
     end
 
     # Test with very small coordinate ranges
-    grid2 = NewDiscretizedGrid((5, 6);
+    grid2 = DiscretizedGrid((5, 6);
         lower_bound=(1e-12, -1e-12),
         upper_bound=(1e-12 + 1e-15, -1e-12 + 1e-15))
 
@@ -257,7 +257,7 @@ end
 
 @testitem "edge cases - asymmetric ranges with negative bounds" begin
     # Test grids with very asymmetric and negative bounds
-    grid = NewDiscretizedGrid((4, 6, 3);
+    grid = DiscretizedGrid((4, 6, 3);
         lower_bound=(-1000.0, -0.001, -1e6),
         upper_bound=(-999.0, 0.001, 1e6))
 
@@ -278,7 +278,7 @@ end
 @testitem "stress test - maximum complexity fused indices" begin
     # Create maximally complex fused index structure
     # All variables distributed unevenly across sites
-    grid = NewDiscretizedGrid(
+    grid = DiscretizedGrid(
         (:a, :b, :c, :d, :e, :f, :g, :h),
         [
             [(:a, 8), (:b, 7), (:c, 6), (:d, 5)],     # 4 vars, site dim = base^4
@@ -340,7 +340,7 @@ end
 end
 
 @testitem "boundary stress test - coordinates exactly on boundaries" begin
-    grid = NewDiscretizedGrid((8, 6);
+    grid = DiscretizedGrid((8, 6);
         lower_bound=(-2.0, 3.0),
         upper_bound=(5.0, 8.0))
 
@@ -370,7 +370,7 @@ end
 
 @testitem "performance stress test - rapid conversions" begin
     # Test performance with moderately sized grids and many conversions
-    grid = NewDiscretizedGrid((12, 10, 8, 6); base=3)
+    grid = DiscretizedGrid((12, 10, 8, 6); base=3)
 
     # Pre-generate test data to avoid timing allocation
     n_tests = 1000
@@ -401,7 +401,7 @@ end
 
 @testitem "R=0 dimension behavior - 2D grid with proper semantics" begin
     # Test a 2D grid where one dimension has R=0 and the other has R=3
-    grid = NewDiscretizedGrid((0, 3); lower_bound=(-1.0, 2.0), upper_bound=(1.0, 6.0))
+    grid = DiscretizedGrid((0, 3); lower_bound=(-1.0, 2.0), upper_bound=(1.0, 6.0))
 
     # R=0 dimension should only accept grid index 1
     @test_nowarn grididx_to_quantics(grid, (1, 1))
@@ -435,5 +435,5 @@ end
     quantics = grididx_to_quantics(grid, (1, 5))
     @test quantics_to_grididx(grid, quantics) == (1, 5)
 
-    @test_throws AssertionError NewDiscretizedGrid((3, 0); includeendpoint=true)
+    @test_throws AssertionError DiscretizedGrid((3, 0); includeendpoint=true)
 end

@@ -1,9 +1,9 @@
-@testitem "NewInherentDiscreteGrid" begin
+@testitem "InherentDiscreteGrid" begin
     for unfoldingscheme in [:interleaved, :fused],
         step in [(1, 1, 1), (1, 1, 2)],
         origin in [(1, 1, 1), (1, 1, 2)]
 
-        m = NewInherentDiscreteGrid{3}(5, origin; unfoldingscheme, step=step)
+        m = InherentDiscreteGrid{3}(5, origin; unfoldingscheme, step=step)
         @test QuanticsGrids.grid_min(m) == origin
         @test QuanticsGrids.grid_step(m) == step
 
@@ -29,10 +29,10 @@
     end
 end
 
-@testitem "NewInherentDiscreteGrid constructors" begin
+@testitem "InherentDiscreteGrid constructors" begin
     # Test basic 1D constructor
     R = 4
-    grid_1d = NewInherentDiscreteGrid{1}(R, 1; base=2, step=1, unfoldingscheme=:fused)
+    grid_1d = InherentDiscreteGrid{1}(R, 1; base=2, step=1, unfoldingscheme=:fused)
     @test grid_1d.base == 2
     @test grid_1d.origin == (1,)
     @test grid_1d.step == (1,)
@@ -40,37 +40,37 @@ end
     # Test multi-dimensional constructor with tuple origin and step
     origin_3d = (5, 10, 15)
     step_3d = (2, 3, 1)
-    grid_3d = NewInherentDiscreteGrid{3}(R, origin_3d; base=3, step=step_3d, unfoldingscheme=:interleaved)
+    grid_3d = InherentDiscreteGrid{3}(R, origin_3d; base=3, step=step_3d, unfoldingscheme=:interleaved)
     @test grid_3d.base == 3
     @test grid_3d.origin == origin_3d
     @test grid_3d.step == step_3d
 
     # Test default parameters
-    grid_default = NewInherentDiscreteGrid{2}(R, (0, 0))
+    grid_default = InherentDiscreteGrid{2}(R, (0, 0))
     @test grid_default.base == 2
     @test grid_default.step == (1, 1)
 end
 
-@testitem "NewInherentDiscreteGrid convenience constructors" begin
+@testitem "InherentDiscreteGrid convenience constructors" begin
     # Test single integer origin constructor
     R = 3
-    grid_single = NewInherentDiscreteGrid{2}(R, 5; step=2)
+    grid_single = InherentDiscreteGrid{2}(R, 5; step=2)
     @test grid_single.origin == (5, 5)
     @test grid_single.step == (2, 2)
 
     # Test mixed single/tuple parameters
-    grid_mixed = NewInherentDiscreteGrid{3}(R, (1, 2, 3); step=4)
+    grid_mixed = InherentDiscreteGrid{3}(R, (1, 2, 3); step=4)
     @test grid_mixed.origin == (1, 2, 3)
     @test grid_mixed.step == (4, 4, 4)
 end
 
-@testitem "NewInherentDiscreteGrid basic properties" begin
+@testitem "InherentDiscreteGrid basic properties" begin
     R = 5
     base = 3
     origin = (10, 20)
     step = (2, 5)
 
-    grid = NewInherentDiscreteGrid{2}(R, origin; base=base, step=step)
+    grid = InherentDiscreteGrid{2}(R, origin; base=base, step=step)
 
     # Test basic properties
     @test ndims(grid) == 2
@@ -84,17 +84,17 @@ end
     @test QuanticsGrids.grid_origin(grid) == origin
 
     # Test with interleaved scheme
-    grid_interleaved = NewInherentDiscreteGrid{2}(R, origin; base=base, step=step, unfoldingscheme=:interleaved)
+    grid_interleaved = InherentDiscreteGrid{2}(R, origin; base=base, step=step, unfoldingscheme=:interleaved)
     @test length(grid_interleaved) == 2 * R  # Number of quantics sites for interleaved
 end
 
-@testitem "NewInherentDiscreteGrid coordinate conversions" begin
+@testitem "InherentDiscreteGrid coordinate conversions" begin
     R = 4
     base = 2
     origin = (5, 10, 15)
     step = (2, 3, 1)
 
-    grid = NewInherentDiscreteGrid{3}(R, origin; base=base, step=step)
+    grid = InherentDiscreteGrid{3}(R, origin; base=base, step=step)
 
     # Test grididx_to_origcoord and origcoord_to_grididx roundtrip
     test_grididx = [(1, 1, 1), (1, 1, 2), (1, 8, 1), (4, 1, 1), (16, 16, 16)]
@@ -115,11 +115,11 @@ end
     @test QuanticsGrids.grididx_to_origcoord(grid, max_grididx) == origin .+ step .* (base^R - 1)
 end
 
-@testitem "NewInherentDiscreteGrid quantics conversions" begin
+@testitem "InherentDiscreteGrid quantics conversions" begin
     # Test fused quantics
     R = 3
     base = 2
-    grid_fused = NewInherentDiscreteGrid{2}(R, (1, 1); base=base, unfoldingscheme=:fused)
+    grid_fused = InherentDiscreteGrid{2}(R, (1, 1); base=base, unfoldingscheme=:fused)
 
     # Test grididx_to_quantics and quantics_to_grididx roundtrip
     test_grididx = [(1, 1), (1, 2), (2, 1), (4, 8), (8, 8)]
@@ -131,7 +131,7 @@ end
     end
 
     # Test interleaved quantics
-    grid_interleaved = NewInherentDiscreteGrid{2}(R, (1, 1); base=base, unfoldingscheme=:interleaved)
+    grid_interleaved = InherentDiscreteGrid{2}(R, (1, 1); base=base, unfoldingscheme=:interleaved)
 
     for grididx in test_grididx
         quantics = QuanticsGrids.grididx_to_quantics(grid_interleaved, grididx)
@@ -141,11 +141,11 @@ end
     end
 end
 
-@testitem "NewInherentDiscreteGrid quantics_to_origcoord and origcoord_to_quantics" begin
+@testitem "InherentDiscreteGrid quantics_to_origcoord and origcoord_to_quantics" begin
     R = 4
     origin = (3, 7)
     step = (2, 3)
-    grid = NewInherentDiscreteGrid{2}(R, origin; step=step)
+    grid = InherentDiscreteGrid{2}(R, origin; step=step)
 
     # Test quantics_to_origcoord and origcoord_to_quantics roundtrip
     for _ in 1:20
@@ -162,37 +162,37 @@ end
     end
 end
 
-@testitem "NewInherentDiscreteGrid localdimensions" begin
+@testitem "InherentDiscreteGrid localdimensions" begin
     R = 4
     base = 3
 
     # Test fused scheme
-    grid_fused_1d = NewInherentDiscreteGrid{1}(R, 1; base=base, unfoldingscheme=:fused)
+    grid_fused_1d = InherentDiscreteGrid{1}(R, 1; base=base, unfoldingscheme=:fused)
     @test QuanticsGrids.localdimensions(grid_fused_1d) == fill(base, R)
 
-    grid_fused_3d = NewInherentDiscreteGrid{3}(R, (1, 1, 1); base=base, unfoldingscheme=:fused)
+    grid_fused_3d = InherentDiscreteGrid{3}(R, (1, 1, 1); base=base, unfoldingscheme=:fused)
     @test QuanticsGrids.localdimensions(grid_fused_3d) == fill(base^3, R)
 
     # Test interleaved scheme
-    grid_interleaved_1d = NewInherentDiscreteGrid{1}(R, 1; base=base, unfoldingscheme=:interleaved)
+    grid_interleaved_1d = InherentDiscreteGrid{1}(R, 1; base=base, unfoldingscheme=:interleaved)
     @test QuanticsGrids.localdimensions(grid_interleaved_1d) == fill(base, R)
 
-    grid_interleaved_3d = NewInherentDiscreteGrid{3}(R, (1, 1, 1); base=base, unfoldingscheme=:interleaved)
+    grid_interleaved_3d = InherentDiscreteGrid{3}(R, (1, 1, 1); base=base, unfoldingscheme=:interleaved)
     @test QuanticsGrids.localdimensions(grid_interleaved_3d) == fill(base, 3 * R)
 
     # Test different bases
     for test_base in [2, 4, 5]
-        grid = NewInherentDiscreteGrid{2}(R, (1, 1); base=test_base, unfoldingscheme=:fused)
+        grid = InherentDiscreteGrid{2}(R, (1, 1); base=test_base, unfoldingscheme=:fused)
         @test QuanticsGrids.localdimensions(grid) == fill(test_base^2, R)
     end
 end
 
-@testitem "NewInherentDiscreteGrid different bases" begin
+@testitem "InherentDiscreteGrid different bases" begin
     R = 3
     origin = (1, 1)
 
     for base in [2, 3, 4, 5]
-        grid = NewInherentDiscreteGrid{2}(R, origin; base=base)
+        grid = InherentDiscreteGrid{2}(R, origin; base=base)
 
         # Test that grid can handle different bases
         max_grididx = (base^R, base^R)
@@ -212,11 +212,11 @@ end
     end
 end
 
-@testitem "NewInherentDiscreteGrid scalar vs tuple return values" begin
+@testitem "InherentDiscreteGrid scalar vs tuple return values" begin
     R = 3
 
     # Test 1D grid returns scalars
-    grid_1d = NewInherentDiscreteGrid{1}(R, 5; step=2)
+    grid_1d = InherentDiscreteGrid{1}(R, 5; step=2)
     grididx_1d = 3
     origcoord_1d = QuanticsGrids.grididx_to_origcoord(grid_1d, grididx_1d)
     @test origcoord_1d isa Int
@@ -228,7 +228,7 @@ end
     @test QuanticsGrids.grid_origin(grid_1d) isa Int
 
     # Test multi-dimensional grid returns tuples
-    grid_2d = NewInherentDiscreteGrid{2}(R, (3, 7); step=(1, 2))
+    grid_2d = InherentDiscreteGrid{2}(R, (3, 7); step=(1, 2))
     grididx_2d = (2, 4)
     origcoord_2d = QuanticsGrids.grididx_to_origcoord(grid_2d, grididx_2d)
     @test origcoord_2d isa Tuple{Int,Int}
@@ -240,14 +240,14 @@ end
     @test QuanticsGrids.grid_origin(grid_2d) isa Tuple{Int,Int}
 end
 
-@testitem "NewInherentDiscreteGrid comprehensive conversion test" begin
+@testitem "InherentDiscreteGrid comprehensive conversion test" begin
     # Test all possible conversion combinations like in the old grid tests
     R = 4
     base = 3
     origin = (2, 5)
     step = (3, 2)
 
-    grid = NewInherentDiscreteGrid{2}(R, origin; base=base, step=step)
+    grid = InherentDiscreteGrid{2}(R, origin; base=base, step=step)
 
     reprs = [:grididx, :quantics, :origcoord]
 
@@ -294,42 +294,42 @@ end
     @test haskey(data, :origcoord)
 end
 
-@testitem "NewInherentDiscreteGrid edge cases and boundary conditions" begin
+@testitem "InherentDiscreteGrid edge cases and boundary conditions" begin
     R = 3
     base = 2
 
     # Test minimum grid size (R=1)
-    grid_min = NewInherentDiscreteGrid{1}(1, 10; base=base, step=5)
+    grid_min = InherentDiscreteGrid{1}(1, 10; base=base, step=5)
     @test QuanticsGrids.grididx_to_origcoord(grid_min, 1) == 10
     @test QuanticsGrids.grididx_to_origcoord(grid_min, base) == 10 + 5 * (base - 1)
 
     # Test large step sizes
-    grid_large_step = NewInherentDiscreteGrid{2}(R, (0, 0); step=(100, 200))
+    grid_large_step = InherentDiscreteGrid{2}(R, (0, 0); step=(100, 200))
     grididx = (2, 3)
     expected_coord = (100, 400)  # (0 + 100*(2-1), 0 + 200*(3-1))
     @test QuanticsGrids.grididx_to_origcoord(grid_large_step, grididx) == expected_coord
 
     # Test negative origins
-    grid_neg = NewInherentDiscreteGrid{2}(R, (-10, -20); step=(2, 3))
+    grid_neg = InherentDiscreteGrid{2}(R, (-10, -20); step=(2, 3))
     min_coord = QuanticsGrids.grididx_to_origcoord(grid_neg, (1, 1))
     @test min_coord == (-10, -20)
 
     # Test single dimension
-    grid_1d = NewInherentDiscreteGrid{1}(R, 5; step=3)
+    grid_1d = InherentDiscreteGrid{1}(R, 5; step=3)
     for i in 1:base^R
         coord = QuanticsGrids.grididx_to_origcoord(grid_1d, i)
         @test QuanticsGrids.origcoord_to_grididx(grid_1d, coord) == i
     end
 end
 
-@testitem "NewInherentDiscreteGrid consistency with unfolding schemes" begin
+@testitem "InherentDiscreteGrid consistency with unfolding schemes" begin
     R = 4
     origin = (1, 1, 1)
     step = (1, 2, 3)
     base = 2
 
-    grid_fused = NewInherentDiscreteGrid{3}(R, origin; step=step, base=base, unfoldingscheme=:fused)
-    grid_interleaved = NewInherentDiscreteGrid{3}(R, origin; step=step, base=base, unfoldingscheme=:interleaved)
+    grid_fused = InherentDiscreteGrid{3}(R, origin; step=step, base=base, unfoldingscheme=:fused)
+    grid_interleaved = InherentDiscreteGrid{3}(R, origin; step=step, base=base, unfoldingscheme=:interleaved)
 
     # Test that coordinate conversions are consistent between schemes
     test_grididx = [(1, 1, 1), (2, 3, 4), (8, 16, 16)]
@@ -357,7 +357,7 @@ end
     @test coord_from_fused == coord_from_interleaved
 end
 
-@testitem "NewInherentDiscreteGrid high-dimensional grids" begin
+@testitem "InherentDiscreteGrid high-dimensional grids" begin
     R = 2  # Keep R small for high dimensions to avoid memory issues
     base = 2
     D = 5  # 5-dimensional grid
@@ -365,7 +365,7 @@ end
     origin = ntuple(i -> i, D)  # (1, 2, 3, 4, 5)
     step = ntuple(i -> i, D)    # (1, 2, 3, 4, 5)
 
-    grid = NewInherentDiscreteGrid{D}(R, origin; step=step, base=base)
+    grid = InherentDiscreteGrid{D}(R, origin; step=step, base=base)
 
     @test ndims(grid) == D
     @test QuanticsGrids.grid_min(grid) == origin
@@ -383,10 +383,10 @@ end
     @test length(quantics) == R  # Fused scheme
 end
 
-@testitem "NewInherentDiscreteGrid performance and stress tests" begin
+@testitem "InherentDiscreteGrid performance and stress tests" begin
     R = 5
     base = 2
-    grid = NewInherentDiscreteGrid{3}(R, (1, 1, 1); base=base)
+    grid = InherentDiscreteGrid{3}(R, (1, 1, 1); base=base)
 
     # Test random conversions for consistency
     for _ in 1:100
@@ -411,15 +411,15 @@ end
     end
 end
 
-@testitem "NewInherentDiscreteGrid grid with zero step (degenerate case)" begin
+@testitem "InherentDiscreteGrid grid with zero step (degenerate case)" begin
     # This might be an edge case that should either work or throw a meaningful error
     R = 3
     origin = (5, 10)
 
-    @test_throws AssertionError NewInherentDiscreteGrid{2}(R, origin; step=(0, 1))
+    @test_throws AssertionError InherentDiscreteGrid{2}(R, origin; step=(0, 1))
 end
 
-@testitem "NewInherentDiscreteGrid with custom indextable - basic" begin
+@testitem "InherentDiscreteGrid with custom indextable - basic" begin
     # Test with a simple custom indextable
     R = 3
     variablenames = (:x, :y)
@@ -433,7 +433,7 @@ end
     step = (2, 3)
     base = 2
 
-    grid = NewInherentDiscreteGrid(variablenames, indextable;
+    grid = InherentDiscreteGrid(variablenames, indextable;
         origin=origin, step=step, base=base)
 
     @test grid.variablenames == variablenames
@@ -458,7 +458,7 @@ end
     @test QuanticsGrids.quantics_to_origcoord(grid, quantics) == origcoord
 end
 
-@testitem "NewInherentDiscreteGrid with complex indextable - mixed sites" begin
+@testitem "InherentDiscreteGrid with complex indextable - mixed sites" begin
     # Test with a more complex indextable with mixed site sizes
     variablenames = (:a, :b, :c)
     indextable = [
@@ -472,7 +472,7 @@ end
     step = (1, 2, 5)
     base = 3
 
-    grid = NewInherentDiscreteGrid(variablenames, indextable;
+    grid = InherentDiscreteGrid(variablenames, indextable;
         origin=origin, step=step, base=base)
 
     @test grid.variablenames == variablenames
@@ -506,7 +506,7 @@ end
     end
 end
 
-@testitem "NewInherentDiscreteGrid with asymmetric indextable" begin
+@testitem "InherentDiscreteGrid with asymmetric indextable" begin
     # Test with highly asymmetric resolution per variable
     variablenames = (:x, :y, :z)
     indextable = [
@@ -519,7 +519,7 @@ end
     step = (10, 5, 2)
     base = 2
 
-    grid = NewInherentDiscreteGrid(variablenames, indextable;
+    grid = InherentDiscreteGrid(variablenames, indextable;
         origin=origin, step=step, base=base)
 
     @test grid.variablenames == variablenames
@@ -542,7 +542,7 @@ end
     @test QuanticsGrids.origcoord_to_grididx(grid, origcoord) == grididx
 end
 
-@testitem "NewInherentDiscreteGrid with single-site indextable" begin
+@testitem "InherentDiscreteGrid with single-site indextable" begin
     # Test edge case: all quantics in a single site
     variablenames = (:x, :y)
     indextable = [
@@ -552,7 +552,7 @@ end
     step = (1, 3)
     base = 2
 
-    grid = NewInherentDiscreteGrid(variablenames, indextable;
+    grid = InherentDiscreteGrid(variablenames, indextable;
         origin=origin, step=step, base=base)
 
     @test grid.variablenames == variablenames
@@ -573,7 +573,7 @@ end
     @test QuanticsGrids.quantics_to_grididx(grid, quantics) == grididx
 end
 
-@testitem "NewInherentDiscreteGrid with maximum fragmentation" begin
+@testitem "InherentDiscreteGrid with maximum fragmentation" begin
     # Test extreme case: each quantics in its own site
     variablenames = (:a, :b)
     indextable = [
@@ -587,7 +587,7 @@ end
     step = (1, 1)
     base = 3
 
-    grid = NewInherentDiscreteGrid(variablenames, indextable;
+    grid = InherentDiscreteGrid(variablenames, indextable;
         origin=origin, step=step, base=base)
 
     @test grid.variablenames == variablenames
@@ -611,7 +611,7 @@ end
     end
 end
 
-@testitem "NewInherentDiscreteGrid complex indextable with base != 2" begin
+@testitem "InherentDiscreteGrid complex indextable with base != 2" begin
     # Test complex indextable with non-binary base
     variablenames = (:u, :v, :w)
     indextable = [
@@ -624,7 +624,7 @@ end
     step = (3, 7, 2)
     base = 5  # Base 5
 
-    grid = NewInherentDiscreteGrid(variablenames, indextable;
+    grid = InherentDiscreteGrid(variablenames, indextable;
         origin=origin, step=step, base=base)
 
     @test grid.variablenames == variablenames
@@ -659,7 +659,7 @@ end
     @test QuanticsGrids.quantics_to_grididx(grid, quantics) == test_grididx
 end
 
-@testitem "NewInherentDiscreteGrid comprehensive indextable test" begin
+@testitem "InherentDiscreteGrid comprehensive indextable test" begin
     # Test a realistic complex case similar to what might be used in practice
     variablenames = (:k_x, :k_y, :ω, :t)
     indextable = [
@@ -674,7 +674,7 @@ end
     step = (1, 1, 2, 5)
     base = 2
 
-    grid = NewInherentDiscreteGrid(variablenames, indextable;
+    grid = InherentDiscreteGrid(variablenames, indextable;
         origin=origin, step=step, base=base)
 
     @test grid.variablenames == variablenames
@@ -707,7 +707,7 @@ end
     end
 end
 
-@testitem "NewInherentDiscreteGrid indextable validation" begin
+@testitem "InherentDiscreteGrid indextable validation" begin
     # Test that constructor properly validates indextable consistency
     variablenames = (:x, :y)
 
@@ -718,7 +718,7 @@ end
         [(:y, 2)]
     ]
 
-    grid = NewInherentDiscreteGrid(variablenames, valid_indextable;
+    grid = InherentDiscreteGrid(variablenames, valid_indextable;
         origin=(1, 1), step=(1, 1))
     @test grid.Rs == (2, 2)  # x and y each have 2 quantics
 
@@ -728,11 +728,11 @@ end
         [(:z, 1)]  # z is not in variablenames
     ]
 
-    @test_throws AssertionError NewInherentDiscreteGrid(variablenames, invalid_indextable_unknown;
+    @test_throws AssertionError InherentDiscreteGrid(variablenames, invalid_indextable_unknown;
         origin=(1, 1), step=(1, 1))
 end
 
-@testitem "NewInherentDiscreteGrid constructor with variablenames and Rs" begin
+@testitem "InherentDiscreteGrid constructor with variablenames and Rs" begin
     # Test basic constructor with explicit variable names and resolutions
     variablenames = (:k_x, :k_y, :ω)
     Rs = (4, 3, 5)
@@ -740,7 +740,7 @@ end
     step = (2, 1, 3)
 
     # Test with default parameters
-    grid1 = NewInherentDiscreteGrid(variablenames, Rs; origin=origin, step=step)
+    grid1 = InherentDiscreteGrid(variablenames, Rs; origin=origin, step=step)
     @test grid1.variablenames == variablenames
     @test grid1.Rs == Rs
     @test grid1.base == 2  # default base
@@ -752,7 +752,7 @@ end
     base = 3
     unfoldingscheme = :interleaved
 
-    grid2 = NewInherentDiscreteGrid(variablenames, Rs;
+    grid2 = InherentDiscreteGrid(variablenames, Rs;
         origin=origin,
         step=step,
         base=base,
@@ -775,14 +775,14 @@ end
     @test QuanticsGrids.quantics_to_grididx(grid2, quantics) == test_grididx
 end
 
-@testitem "NewInherentDiscreteGrid constructor with Rs tuple only" begin
+@testitem "InherentDiscreteGrid constructor with Rs tuple only" begin
     # Test constructor that auto-generates variable names
     Rs = (3, 4, 2)
     origin = (5, 0, -10)
     step = (1, 2, 5)
     base = 3
 
-    grid = NewInherentDiscreteGrid(Rs; origin=origin, step=step, base=base)
+    grid = InherentDiscreteGrid(Rs; origin=origin, step=step, base=base)
 
     @test grid.Rs == Rs
     @test grid.origin == origin
@@ -800,14 +800,14 @@ end
     @test QuanticsGrids.origcoord_to_grididx(grid, origcoord) == grididx
 end
 
-@testitem "NewInherentDiscreteGrid 1D constructor with R::Int" begin
-    # Test 1D constructor similar to NewDiscretizedGrid(R, lower, upper)
+@testitem "InherentDiscreteGrid 1D constructor with R::Int" begin
+    # Test 1D constructor similar to DiscretizedGrid(R, lower, upper)
     R = 5
     origin = 10
     step = 3
     base = 2
 
-    grid = NewInherentDiscreteGrid(R, origin; step=step, base=base)
+    grid = InherentDiscreteGrid(R, origin; step=step, base=base)
 
     @test grid.Rs == (R,)
     @test grid.origin == (origin,)
@@ -829,15 +829,15 @@ end
     @test origcoord == expected_coord
 end
 
-@testitem "NewInherentDiscreteGrid parametric constructor NewInherentDiscreteGrid{D}" begin
-    # Test parametric type constructor like NewDiscretizedGrid{D}
+@testitem "InherentDiscreteGrid parametric constructor InherentDiscreteGrid{D}" begin
+    # Test parametric type constructor like DiscretizedGrid{D}
     D = 4
     R = 3
     origin = ntuple(i -> i * 5, D)  # (5, 10, 15, 20)
     step = ntuple(i -> i, D)        # (1, 2, 3, 4)
     base = 3
 
-    grid = NewInherentDiscreteGrid{D}(R, origin; step=step, base=base, unfoldingscheme=:interleaved)
+    grid = InherentDiscreteGrid{D}(R, origin; step=step, base=base, unfoldingscheme=:interleaved)
 
     @test ndims(grid) == D
     @test grid.Rs == ntuple(_ -> R, D)  # All dimensions have same R
@@ -855,12 +855,12 @@ end
     @test QuanticsGrids.origcoord_to_grididx(grid, origcoord) == grididx
 end
 
-@testitem "NewInherentDiscreteGrid default parameter behavior" begin
+@testitem "InherentDiscreteGrid default parameter behavior" begin
     # Test various combinations of default parameters
     Rs = (3, 2)
 
     # Test with minimal parameters (all defaults)
-    grid_minimal = NewInherentDiscreteGrid(Rs)
+    grid_minimal = InherentDiscreteGrid(Rs)
     @test grid_minimal.Rs == Rs
     @test grid_minimal.base == 2  # default
     @test grid_minimal.origin == (1, 1)  # default origin should be (1, 1, ...)
@@ -868,47 +868,47 @@ end
 
     # Test with partial parameters
     custom_origin = (5, -2)
-    grid_partial = NewInherentDiscreteGrid(Rs; origin=custom_origin)
+    grid_partial = InherentDiscreteGrid(Rs; origin=custom_origin)
     @test grid_partial.origin == custom_origin
     @test grid_partial.step == (1, 1)  # should still be default
     @test grid_partial.base == 2       # should still be default
 
     # Test step can be specified as single value or tuple
-    grid_step_single = NewInherentDiscreteGrid(Rs; step=3)
+    grid_step_single = InherentDiscreteGrid(Rs; step=3)
     @test grid_step_single.step == (3, 3)  # should broadcast to all dimensions
 
-    grid_step_tuple = NewInherentDiscreteGrid(Rs; step=(2, 5))
+    grid_step_tuple = InherentDiscreteGrid(Rs; step=(2, 5))
     @test grid_step_tuple.step == (2, 5)
 
     # Test origin can be specified as single value or tuple  
-    grid_origin_single = NewInherentDiscreteGrid(Rs; origin=7)
+    grid_origin_single = InherentDiscreteGrid(Rs; origin=7)
     @test grid_origin_single.origin == (7, 7)  # should broadcast
 
-    grid_origin_tuple = NewInherentDiscreteGrid(Rs; origin=(-1, 3))
+    grid_origin_tuple = InherentDiscreteGrid(Rs; origin=(-1, 3))
     @test grid_origin_tuple.origin == (-1, 3)
 end
 
-@testitem "NewInherentDiscreteGrid constructor error handling" begin
+@testitem "InherentDiscreteGrid constructor error handling" begin
     # Test that constructors properly validate input parameters
 
     # Test invalid base
-    @test_throws AssertionError NewInherentDiscreteGrid((3, 2); base=1)  # base must be > 1
-    @test_throws AssertionError NewInherentDiscreteGrid((3, 2); base=0)
+    @test_throws AssertionError InherentDiscreteGrid((3, 2); base=1)  # base must be > 1
+    @test_throws AssertionError InherentDiscreteGrid((3, 2); base=0)
 
     # Test mismatched dimensions
-    @test_throws MethodError NewInherentDiscreteGrid((3, 2); origin=(1, 1, 1))  # wrong origin length
-    @test_throws MethodError NewInherentDiscreteGrid((3, 2); step=(1, 1, 1))    # wrong step length
+    @test_throws MethodError InherentDiscreteGrid((3, 2); origin=(1, 1, 1))  # wrong origin length
+    @test_throws MethodError InherentDiscreteGrid((3, 2); step=(1, 1, 1))    # wrong step length
 
     # Test negative R values
-    @test_throws AssertionError NewInherentDiscreteGrid((-1, 2))  # negative R
-    @test_throws AssertionError NewInherentDiscreteGrid((3, -2))
+    @test_throws AssertionError InherentDiscreteGrid((-1, 2))  # negative R
+    @test_throws AssertionError InherentDiscreteGrid((3, -2))
 
     # Test invalid unfoldingscheme
-    @test_throws AssertionError NewInherentDiscreteGrid((3, 2); unfoldingscheme=:invalid)
+    @test_throws AssertionError InherentDiscreteGrid((3, 2); unfoldingscheme=:invalid)
 
     # Test zero R (might be edge case depending on implementation)
     try
-        grid_zero = NewInherentDiscreteGrid((0, 2))
+        grid_zero = InherentDiscreteGrid((0, 2))
         # If it works, verify it behaves sensibly
         @test grid_zero.Rs == (0, 2)
     catch err
@@ -917,7 +917,7 @@ end
     end
 end
 
-@testitem "NewInherentDiscreteGrid constructor compatibility with existing patterns" begin
+@testitem "InherentDiscreteGrid constructor compatibility with existing patterns" begin
     # Test that constructors work with patterns used in existing codebase
 
     # Pattern 1: Like InherentDiscreteGrid{d}(R, origin; kwargs...)
@@ -925,21 +925,21 @@ end
     origin_2d = (1, 5)
     step_2d = (2, 3)
 
-    grid_pattern1 = NewInherentDiscreteGrid{2}(R, origin_2d; step=step_2d, base=3)
+    grid_pattern1 = InherentDiscreteGrid{2}(R, origin_2d; step=step_2d, base=3)
     @test ndims(grid_pattern1) == 2
     @test grid_pattern1.Rs == (R, R)
     @test grid_pattern1.origin == origin_2d
     @test grid_pattern1.step == step_2d
 
-    # Pattern 2: Like NewDiscretizedGrid((R1, R2, ...); kwargs...)
+    # Pattern 2: Like DiscretizedGrid((R1, R2, ...); kwargs...)
     Rs_pattern2 = (3, 5, 2)
-    grid_pattern2 = NewInherentDiscreteGrid(Rs_pattern2; origin=(0, 0, 0), unfoldingscheme=:interleaved)
+    grid_pattern2 = InherentDiscreteGrid(Rs_pattern2; origin=(0, 0, 0), unfoldingscheme=:interleaved)
     @test grid_pattern2.Rs == Rs_pattern2
 
     # Pattern 3: Single R for 1D
     R_1d = 6
     origin_1d = 10
-    grid_pattern3 = NewInherentDiscreteGrid(R_1d, origin_1d; step=2, base=4)
+    grid_pattern3 = InherentDiscreteGrid(R_1d, origin_1d; step=2, base=4)
     @test ndims(grid_pattern3) == 1
     @test grid_pattern3.Rs == (R_1d,)
     @test grid_pattern3.origin == (origin_1d,)
@@ -961,7 +961,7 @@ end
     end
 end
 
-@testitem "NewInherentDiscreteGrid constructor with mixed parameter types" begin
+@testitem "InherentDiscreteGrid constructor with mixed parameter types" begin
     # Test constructors handle mixed integer/tuple parameters correctly
 
     # Single R with multi-dimensional origin/step
@@ -969,7 +969,7 @@ end
     origin_multi = (5, 10, 15)
     step_multi = (1, 2, 3)
 
-    grid_mixed = NewInherentDiscreteGrid{3}(R, origin_multi; step=step_multi)
+    grid_mixed = InherentDiscreteGrid{3}(R, origin_multi; step=step_multi)
     @test grid_mixed.Rs == (R, R, R)  # R should be replicated
     @test grid_mixed.origin == origin_multi
     @test grid_mixed.step == step_multi
@@ -979,7 +979,7 @@ end
     origin_single = 7
     step_single = 2
 
-    grid_broadcast = NewInherentDiscreteGrid(Rs_multi; origin=origin_single, step=step_single)
+    grid_broadcast = InherentDiscreteGrid(Rs_multi; origin=origin_single, step=step_single)
     @test grid_broadcast.Rs == Rs_multi
     @test grid_broadcast.origin == (origin_single, origin_single, origin_single)
     @test grid_broadcast.step == (step_single, step_single, step_single)
