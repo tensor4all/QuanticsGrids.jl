@@ -52,7 +52,6 @@ function _build_lookup_table(Rs, indextable, variablenames, ::Val{D}) where D
         for (pos_in_site, qindex) in pairs(quanticsindices)
             variablename, bitnumber = qindex
             var_idx = findfirst(==(variablename), variablenames)
-            isnothing(var_idx) && continue
             lookup_table[var_idx][bitnumber] = (site_idx, pos_in_site)
         end
     end

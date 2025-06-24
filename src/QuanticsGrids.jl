@@ -7,7 +7,8 @@ export origcoord_to_quantics, origcoord_to_grididx
 
 abstract type Grid{D} end
 
-include("grid.jl")
-include("grid_discretized.jl")
+include("inherent_discrete_grid.jl")
+include("discretized_grid.jl")
+include("show_grids.jl")
 
 end
