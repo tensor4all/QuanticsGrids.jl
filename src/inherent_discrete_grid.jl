@@ -52,6 +52,9 @@ function _build_lookup_table(Rs, indextable, variablenames, ::Val{D}) where D
         for (pos_in_site, qindex) in pairs(quanticsindices)
             variablename, bitnumber = qindex
             var_idx = findfirst(==(variablename), variablenames)
+            if isnothing(var_idx)
+                throw(ArgumentError("Unknown variable $variablename specified on site $site_idx. Known variable names are $variablenames."))
+            end
             lookup_table[var_idx][bitnumber] = (site_idx, pos_in_site)
         end
     end

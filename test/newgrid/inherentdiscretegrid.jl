@@ -425,7 +425,7 @@ end
     variablenames = (:x, :y)
     indextable = [
         [(:x, 1)],                    # site 1: x_1
-        [(:x, 2)],                    # site 2: x_2  
+        [(:x, 2)],                    # site 2: x_2
         [(:y, 1)],                    # site 3: y_1
         [(:x, 3), (:y, 2)]           # site 4: x_3, y_2
     ]
@@ -578,7 +578,7 @@ end
     variablenames = (:a, :b)
     indextable = [
         [(:a, 1)],    # site 1: a_1
-        [(:a, 2)],    # site 2: a_2  
+        [(:a, 2)],    # site 2: a_2
         [(:a, 3)],    # site 3: a_3
         [(:b, 1)],    # site 4: b_1
         [(:b, 2)]     # site 5: b_2
@@ -653,7 +653,7 @@ end
     quantics = QuanticsGrids.grididx_to_quantics(grid, test_grididx)
     @test length(quantics) == 4
     @test all(1 .<= quantics[1] .<= 25)   # site 1
-    @test all(1 .<= quantics[2] .<= 25)   # site 2  
+    @test all(1 .<= quantics[2] .<= 25)   # site 2
     @test all(1 .<= quantics[3] .<= 5)    # site 3
     @test all(1 .<= quantics[4] .<= 125)  # site 4
     @test QuanticsGrids.quantics_to_grididx(grid, quantics) == test_grididx
@@ -728,8 +728,25 @@ end
         [(:z, 1)]  # z is not in variablenames
     ]
 
-    @test_throws AssertionError InherentDiscreteGrid(variablenames, invalid_indextable_unknown;
+    @test_throws AssertionError InherentDiscreteGrid(
+        variablenames, invalid_indextable_unknown;
         origin=(1, 1), step=(1, 1))
+
+    invalid_indextable_missing_index = [
+        [(:x, 1), (:y, 1)],
+        [(:x, 3), (:y, 2)]
+    ]
+
+    @test_throws AssertionError InherentDiscreteGrid(
+        variablenames, invalid_indextable_missing_index)
+
+    invalid_indextable_repeated_index = [
+        [(:x, 1), (:y, 1)],
+        [(:x, 1), (:y, 2)]
+    ]
+
+    @test_throws AssertionError InherentDiscreteGrid(
+        variablenames, invalid_indextable_repeated_index)
 end
 
 @testitem "InherentDiscreteGrid constructor with variablenames and Rs" begin
@@ -880,7 +897,7 @@ end
     grid_step_tuple = InherentDiscreteGrid(Rs; step=(2, 5))
     @test grid_step_tuple.step == (2, 5)
 
-    # Test origin can be specified as single value or tuple  
+    # Test origin can be specified as single value or tuple
     grid_origin_single = InherentDiscreteGrid(Rs; origin=7)
     @test grid_origin_single.origin == (7, 7)  # should broadcast
 
@@ -974,7 +991,7 @@ end
     @test grid_mixed.origin == origin_multi
     @test grid_mixed.step == step_multi
 
-    # Multi-R with single origin/step values  
+    # Multi-R with single origin/step values
     Rs_multi = (2, 4, 3)
     origin_single = 7
     step_single = 2
