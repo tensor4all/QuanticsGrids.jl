@@ -399,6 +399,13 @@ end
 end
 
 @testitem "Additional Constructors" begin
-    g = DiscretizedGrid{2}((3, 4), (-2, 3), (4, 5); unfoldingscheme=:interleaved)
+    @show g = DiscretizedGrid{2}((3, 4), (-2, 3), (4, 5); unfoldingscheme=:interleaved)
+    @test QuanticsGrids.grid_Rs(g) == (3, 4)
+    @test length(g) == 7
+    @test last.(only.(QuanticsGrids.grid_indextable(g))) == [1, 1, 2, 2, 3, 3, 4]
+
     g = DiscretizedGrid((3, 4), (-2, 3), (4, 5); unfoldingscheme=:interleaved)
+    @test QuanticsGrids.grid_Rs(g) == (3, 4)
+    @test length(g) == 7
+    @test last.(only.(QuanticsGrids.grid_indextable(g))) == [1, 1, 2, 2, 3, 3, 4]
 end
