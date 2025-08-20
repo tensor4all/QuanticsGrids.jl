@@ -8,6 +8,7 @@ struct InherentDiscreteGrid{D} <: Grid{D}
 
     # Lookup table: lookup_table[variablename_index][bitnumber] -> (site_index, position_in_site)
     lookup_table::NTuple{D,Vector{Tuple{Int,Int}}}
+    maxgrididx::NTuple{D,Int}
 
     function InherentDiscreteGrid{D}(
         Rs::NTuple{D,Int},
@@ -17,15 +18,28 @@ struct InherentDiscreteGrid{D} <: Grid{D}
         base::Int,
         indextable::Vector{Vector{Tuple{Symbol,Int}}}
     ) where {D}
-        @assert all(>=(0), Rs)
-        @assert all(>=(1), step)
-        @assert base > 1
-        @assert all(R -> rangecheck_R(R; base), Rs)
-        @assert allunique(variablenames)
+        if !(D isa Int)
+            throw(ArgumentError(lazy"Got dimension $D, which is not an Int."))
+        end
+        if base <= 1
+            throw(ArgumentError(lazy"Got base = $base. base must be at least 2."))
+        end
+        for d in 1:D
+            if !(step[d] >= 1)
+                throw(ArgumentError(lazy"Got step[$d] = $(step[d]). step must be at least 1."))
+            end
+            if !rangecheck_R(Rs[d]; base)
+                throw(ArgumentError(lazy"Got Rs[$d] = $(Rs[d]) with base = $base. For all gridindices from 1 to base^R to fit into an Int, we must have base ^ R <= typemax(Int)"))
+            end
+        end
+        if !allunique(variablenames)
+            throw(ArgumentError(lazy"Got variablenames = $variablenames. variablenames must be unique."))
+        end
 
-        lookup_table = _build_lookup_table(Rs, indextable, variablenames, Val(D))
+        lookup_table = _build_lookup_table(Rs, indextable, variablenames)
+        maxgrididx = map(R -> base^R, Rs)
 
-        return new{D}(Rs, origin, step, variablenames, base, indextable, lookup_table)
+        return new{D}(Rs, origin, step, variablenames, base, indextable, lookup_table, maxgrididx)
     end
 end
 
@@ -43,8 +57,11 @@ default_step(::Val{D}) where D = ntuple(Returns(1), D)
 
 default_origin(::Val{D}) where D = ntuple(Returns(1), D)
 
-function _build_lookup_table(Rs, indextable, variablenames, ::Val{D}) where D
+function _build_lookup_table(Rs::NTuple{D,Int}, indextable::Vector{Vector{Tuple{Symbol,Int}}}, variablenames::NTuple{D,Symbol}) where D
     lookup_table = ntuple(D) do d
+        if Rs[d] < 0
+            throw(ArgumentError(lazy"Got Rs[$d] = $(Rs[d]). Rs must be non-negative."))
+        end
         Vector{Tuple{Int,Int}}(undef, Rs[d])
     end
 
@@ -52,7 +69,9 @@ function _build_lookup_table(Rs, indextable, variablenames, ::Val{D}) where D
         for (pos_in_site, qindex) in pairs(quanticsindices)
             variablename, bitnumber = qindex
             var_idx = findfirst(==(variablename), variablenames)
-            isnothing(var_idx) && continue
+            if isnothing(var_idx)
+                throw(ArgumentError(lazy"Indextable contains unknown index $qindex. Valid variablenames are $variablenames."))
+            end
             lookup_table[var_idx][bitnumber] = (site_idx, pos_in_site)
         end
     end
@@ -72,10 +91,12 @@ function rangecheck_R(R::Int; base::Int=2)::Bool
 end
 
 function _build_indextable(variablenames::NTuple{D,Symbol}, Rs::NTuple{D,Int}, unfoldingscheme::Symbol) where D
-    @assert unfoldingscheme in (:interleaved, :fused)
+    if !(unfoldingscheme in (:interleaved, :fused))
+        throw(ArgumentError(lazy"Got unfoldingscheme = $unfoldingscheme. Supported are :interleaved and :fused."))
+    end
     indextable = Vector{Tuple{Symbol,Int}}[]
 
-    for bitnumber in 1:maximum(Rs)
+    for bitnumber in 1:maximum(Rs; init=0)
         if unfoldingscheme === :interleaved
             _add_interleaved_indices!(indextable, variablenames, Rs, bitnumber)
         elseif unfoldingscheme === :fused
@@ -211,10 +232,6 @@ function InherentDiscreteGrid(
     step=default_step(Val(D)),
     base=2
 ) where D
-    @assert all(Iterators.flatten(indextable)) do index
-        first(index) ∈ variablenames
-    end
-
     Rs = Tuple(map(variablenames) do variablename
         count(index -> first(index) == variablename, Iterators.flatten(indextable))
     end)
@@ -236,8 +253,7 @@ function InherentDiscreteGrid(
     return InherentDiscreteGrid{D}(Rs, origin, step, variablenames, base, indextable)
 end
 
-function InherentDiscreteGrid(Rs::NTuple{D,Int}; kwargs...) where {D}
-    variablenames = ntuple(Symbol, D)
+function InherentDiscreteGrid(Rs::NTuple{D,Int}; variablenames=ntuple(Symbol, D), kwargs...) where {D}
     return InherentDiscreteGrid(variablenames, Rs; kwargs...)
 end
 
@@ -266,7 +282,9 @@ grid_step(g::InherentDiscreteGrid) = _convert_to_scalar_if_possible(g.step)
 grid_origin(g::InherentDiscreteGrid) = _convert_to_scalar_if_possible(g.origin)
 
 function sitedim(g::InherentDiscreteGrid, site::Int)::Int
-    @assert site ∈ eachindex(g.indextable)
+    if !(site ∈ eachindex(g.indextable))
+        throw(DomainError(site, lazy"Site index out of bounds [1, $(length(g.indextable))]."))
+    end
     return g.base^length(g.indextable[site])
 end
 
@@ -285,8 +303,16 @@ grid_max(g::InherentDiscreteGrid) = _convert_to_scalar_if_possible(
 # ============================================================================
 
 function quantics_to_grididx(g::InherentDiscreteGrid{D}, quantics::AbstractVector{Int}) where D
-    @assert length(quantics) == length(g)
-    @assert all(site -> quantics[site] ∈ 1:sitedim(g, site), eachindex(quantics))
+    # TODO: add switch to turn off input validation
+    if !(length(quantics) == length(g))
+        throw(ArgumentError(lazy"Quantics vector must have length $(length(g.indextable)), got $(length(quantics))."))
+    end
+
+    for site in eachindex(quantics)
+        if !(1 <= quantics[site] <= sitedim(g, site))
+            throw(DomainError(quantics[site], lazy"Quantics value for site $site out of range 1:$(sitedim(g, site))."))
+        end
+    end
 
     result = if g.base == 2
         _quantics_to_grididx_base2(g, quantics)
@@ -297,26 +323,34 @@ function quantics_to_grididx(g::InherentDiscreteGrid{D}, quantics::AbstractVecto
     return _convert_to_scalar_if_possible(result)
 end
 
-function grididx_to_quantics(g::InherentDiscreteGrid{D}, grididx) where D
+function grididx_to_quantics(g::InherentDiscreteGrid{D}, grididx::Int) where D
     grididx_tuple = _to_tuple(Val(D), grididx)
-
-    @assert length(grididx_tuple) == D lazy"Grid index must have dimension $D, got $(length(grididx_tuple))"
-    @assert all(1 ≤ grididx_tuple[d] ≤ g.base^g.Rs[d] for d in 1:D) "Grid index out of bounds"
+    return grididx_to_quantics(g, grididx_tuple)
+end
+function grididx_to_quantics(g::InherentDiscreteGrid{D}, grididx_tuple::NTuple{D,Int}) where D
+    # TODO: add switch to turn off input validation
+    for d in 1:D
+        if !(1 <= grididx_tuple[d] <= g.maxgrididx[d])
+            throw(DomainError(grididx_tuple[d], lazy"Grid index out of bounds [1, $(g.maxgrididx[d])]."))
+        end
+    end
 
     result = ones(Int, length(g.indextable))
-
     if g.base == 2
         _grididx_to_quantics_base2!(result, g, grididx_tuple)
     else
         _grididx_to_quantics_general!(result, g, grididx_tuple)
     end
-
     return result
 end
 
 function grididx_to_origcoord(g::InherentDiscreteGrid{D}, grididx) where D
     grididx = _to_tuple(Val(D), grididx)
-    @assert all(1 .<= grididx .<= (g.base .^ g.Rs)) lazy"Grid-index $grididx out of bounds [1, $(g.base .^ g.Rs)]"
+    for d in 1:D
+        if !(grididx[d] ∈ 1:g.maxgrididx[d])
+            throw(DomainError(grididx[d], lazy"Grid index out of bounds [1, $(g.maxgrididx[d])]."))
+        end
+    end
 
     res = grid_origin(g) .+ (grididx .- 1) .* grid_step(g)
 
@@ -328,7 +362,11 @@ function origcoord_to_grididx(g::InherentDiscreteGrid{D}, coordinate) where {D}
     bounds_lower = grid_min(g)
     bounds_upper = grid_max(g)
     # TODO: think about the correct bounds to use here
-    @assert all(bounds_lower .<= coord_tuple .<= bounds_upper) "Coordinate $coord_tuple out of bounds [$bounds_lower, $bounds_upper]"
+    for d in 1:D
+        if !(bounds_lower[d] <= coord_tuple[d] <= bounds_upper[d])
+            throw(DomainError(coord_tuple[d], lazy"Coordinate out of bounds [$(bounds_lower[d]), $(bounds_upper[d])]."))
+        end
+    end
 
     discrete_idx = div.(coord_tuple .- grid_min(g), grid_step(g)) .+ 1
     discrete_idx = clamp.(discrete_idx, 1, g.base .^ g.Rs)

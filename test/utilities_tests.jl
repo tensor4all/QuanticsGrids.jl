@@ -308,8 +308,8 @@ end
 @testitem "boundary error handling" begin
     R = 5
     g = DiscretizedGrid{1}(R)
-    @test_throws AssertionError QuanticsGrids.origcoord_to_grididx(g, -0.1)
-    @test_throws AssertionError QuanticsGrids.origcoord_to_grididx(g, 1.1)
+    @test_throws DomainError QuanticsGrids.origcoord_to_grididx(g, -0.1)
+    @test_throws DomainError QuanticsGrids.origcoord_to_grididx(g, 1.1)
 end
 
 @testitem "large grids" begin
@@ -461,10 +461,10 @@ end
     @test coords_z_custom[end] ≈ QuanticsGrids.grid_max(grid_custom)[3]
 
     # Test error handling - dimension out of bounds
-    @test_throws AssertionError QuanticsGrids.grid_origcoords(grid_1d, 0)
-    @test_throws AssertionError QuanticsGrids.grid_origcoords(grid_1d, 2)
-    @test_throws AssertionError QuanticsGrids.grid_origcoords(grid_2d, 3)
-    @test_throws AssertionError QuanticsGrids.grid_origcoords(grid_custom, 4)
+    @test_throws DomainError QuanticsGrids.grid_origcoords(grid_1d, 0)
+    @test_throws DomainError QuanticsGrids.grid_origcoords(grid_1d, 2)
+    @test_throws DomainError QuanticsGrids.grid_origcoords(grid_2d, 3)
+    @test_throws DomainError QuanticsGrids.grid_origcoords(grid_custom, 4)
 
     # Test that returned range is iterable and has correct type
     coords = QuanticsGrids.grid_origcoords(grid_1d, 1)

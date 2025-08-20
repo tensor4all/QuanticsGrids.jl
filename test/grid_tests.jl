@@ -1,8 +1,6 @@
-
 @testitem "grid.jl" begin
     using Test
     import QuanticsGrids
-
 
     @testset "quanticsfunction" begin
         R = 8
@@ -30,7 +28,7 @@
 
     @testset "1D grid (too large R)" begin
         R = 64
-        @test_throws AssertionError QuanticsGrids.DiscretizedGrid{1}(R, 0.0, 1.0)
+        @test_throws ArgumentError QuanticsGrids.DiscretizedGrid{1}(R, 0.0, 1.0)
     end
 
     @testset "grid representation conversion" for R in [10]
@@ -185,16 +183,15 @@
 
             for (c, ref) in zip(cs, refs)
                 @inferred(QuanticsGrids.origcoord_to_grididx(g, c))
-                @show QuanticsGrids.origcoord_to_grididx(g, c), ref
                 @test all(QuanticsGrids.origcoord_to_grididx(g, c) .== ref)
             end
 
-            @test_throws AssertionError QuanticsGrids.origcoord_to_grididx(g, (0.0, 0.0))
-            @test_throws AssertionError QuanticsGrids.origcoord_to_grididx(g, (0.0, 1.1))
-            @test_throws AssertionError QuanticsGrids.origcoord_to_grididx(g, (1.1, 0.0))
-            @test_throws AssertionError QuanticsGrids.origcoord_to_grididx(g, (3.0, 1.1))
-            @test_throws AssertionError QuanticsGrids.origcoord_to_grididx(g, (1.1, 3.0))
-            @test_throws AssertionError QuanticsGrids.origcoord_to_grididx(g, (3.0, 3.0))
+            @test_throws DomainError QuanticsGrids.origcoord_to_grididx(g, (0.0, 0.0))
+            @test_throws DomainError QuanticsGrids.origcoord_to_grididx(g, (0.0, 1.1))
+            @test_throws DomainError QuanticsGrids.origcoord_to_grididx(g, (1.1, 0.0))
+            @test_throws DomainError QuanticsGrids.origcoord_to_grididx(g, (3.0, 1.1))
+            @test_throws DomainError QuanticsGrids.origcoord_to_grididx(g, (1.1, 3.0))
+            @test_throws DomainError QuanticsGrids.origcoord_to_grididx(g, (3.0, 3.0))
         end
 
         @testset "2D (includeendpoint)" for unfoldingscheme in [:interleaved, :fused]

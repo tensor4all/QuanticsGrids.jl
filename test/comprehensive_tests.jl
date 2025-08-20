@@ -120,14 +120,14 @@
         end
     end
 
-    @test_throws AssertionError QuanticsGrids.origcoord_to_grididx(grid, (lb[1] - 1, lb[2], lb[3], lb[4]))
-    @test_throws AssertionError QuanticsGrids.origcoord_to_grididx(grid, (ub[1] + 1, ub[2], ub[3], ub[4]))
+    @test_throws DomainError QuanticsGrids.origcoord_to_grididx(grid, (lb[1] - 1, lb[2], lb[3], lb[4]))
+    @test_throws DomainError QuanticsGrids.origcoord_to_grididx(grid, (ub[1] + 1, ub[2], ub[3], ub[4]))
 
-    @test_throws AssertionError grididx_to_origcoord(grid, (0, 1, 1, 1))
-    @test_throws AssertionError grididx_to_origcoord(grid, (base^4 + 1, 1, 1, 1))
+    @test_throws DomainError grididx_to_origcoord(grid, (0, 1, 1, 1))
+    @test_throws DomainError grididx_to_origcoord(grid, (base^4 + 1, 1, 1, 1))
 
     invalid_quantics = [28, 1, 1, 1, 1, 1, 1]
-    @test_throws AssertionError quantics_to_grididx(grid, invalid_quantics)
+    @test_throws DomainError quantics_to_grididx(grid, invalid_quantics)
 
     precision_test_coords = [
         (lb[1] + gstep[1] * 0.5, lb[2], lb[3], lb[4]),
@@ -278,15 +278,15 @@
     grididx_3d_pos = QuanticsGrids.origcoord_to_grididx(test_grid_3d, (0.5, 1.0, 15.0))
     @test grididx_3d_kw == grididx_3d_pos
 
-    @test_throws AssertionError QuanticsGrids.origcoord_to_grididx(test_grid_2d; x=1.0)
-    @test_throws AssertionError QuanticsGrids.origcoord_to_grididx(test_grid_2d; y=2.0)
-    @test_throws AssertionError QuanticsGrids.origcoord_to_grididx(test_grid_2d; x=1.0, y=2.0, z=3.0)
-    @test_throws AssertionError QuanticsGrids.origcoord_to_grididx(test_grid_2d; a=1.0, b=2.0)
+    @test_throws ArgumentError QuanticsGrids.origcoord_to_grididx(test_grid_2d; x=1.0)
+    @test_throws ArgumentError QuanticsGrids.origcoord_to_grididx(test_grid_2d; y=2.0)
+    @test_throws ArgumentError QuanticsGrids.origcoord_to_grididx(test_grid_2d; x=1.0, y=2.0, z=3.0)
+    @test_throws ArgumentError QuanticsGrids.origcoord_to_grididx(test_grid_2d; a=1.0, b=2.0)
 
-    @test_throws AssertionError grididx_to_origcoord(test_grid_2d; x=1)
-    @test_throws AssertionError grididx_to_origcoord(test_grid_2d; y=2)
-    @test_throws AssertionError grididx_to_origcoord(test_grid_2d; x=1, y=2, z=3)
-    @test_throws AssertionError grididx_to_origcoord(test_grid_2d; a=1, b=2)
+    @test_throws ArgumentError grididx_to_origcoord(test_grid_2d; x=1)
+    @test_throws ArgumentError grididx_to_origcoord(test_grid_2d; y=2)
+    @test_throws ArgumentError grididx_to_origcoord(test_grid_2d; x=1, y=2, z=3)
+    @test_throws ArgumentError grididx_to_origcoord(test_grid_2d; a=1, b=2)
 
     for _ in 1:10
         coord_vals = (rand() * 6 - 2, rand() * 9 - 3)

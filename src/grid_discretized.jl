@@ -92,11 +92,15 @@ struct DiscretizedGrid{D} <: Grid{D}
     function DiscretizedGrid{D}(
         Rs, lower_bound, upper_bound, variablenames, base, indextable, includeendpoint
     ) where {D}
-        @assert all(lower_bound .< upper_bound)
-
-        discretegrid = InherentDiscreteGrid(variablenames, indextable; base)
         lower_bound = _to_tuple(Val(D), lower_bound)
         upper_bound = _to_tuple(Val(D), upper_bound)
+        for d in 1:D
+            if !(lower_bound[d] < upper_bound[d])
+                throw(ArgumentError(lazy"Got (lower_bound[$d], upper_bound[$d]) = $((lower_bound[d], upper_bound[d])). Each lower bound needs to be strictly less than the corresponding upper bound."))
+            end
+        end
+
+        discretegrid = InherentDiscreteGrid(variablenames, indextable; base)
 
         upper_bound = _adjust_upper_bounds(
             upper_bound, lower_bound, includeendpoint, base, Rs, Val(D)
@@ -112,7 +116,11 @@ end
 
 function _adjust_upper_bounds(upper_bound, lower_bound, includeendpoint, base, Rs, ::Val{D}) where D
     includeendpoint = _to_tuple(Val(D), includeendpoint)
-    @assert all(d -> nand(iszero(Rs[d]), includeendpoint[d]), 1:D)
+    for d in 1:D
+        if iszero(Rs[d]) && includeendpoint[d]
+            throw(ArgumentError(lazy"Got Rs[$d] = 0 and includeendpoint[$d] = true. This is not allowed."))
+        end
+    end
 
     return ntuple(D) do d
         if includeendpoint[d]
@@ -130,9 +138,13 @@ default_upper_bound(::Val{D}) where D = _to_tuple(Val(D), 1.0)
 function _handle_kwargs_input(g::DiscretizedGrid{D}; kwargs...) where {D}
     provided_keys = keys(kwargs)
     expected_keys = grid_variablenames(g)
-    @assert Set(provided_keys) == Set(expected_keys) "Expected keyword arguments $(expected_keys), got $(tuple(provided_keys...))"
+    if !(Set(provided_keys) == Set(expected_keys))
+        throw(ArgumentError(lazy"Expected keyword arguments $(expected_keys), got $(tuple(provided_keys...))"))
+    end
 
-    @assert all(v -> v isa Real, values(kwargs)) "All keyword argument values must be Real numbers"
+    if !all(v -> v isa Real, values(kwargs))
+        throw(ArgumentError(lazy"Got kwargs = $kwargs. All keyword argument values must be Real numbers"))
+    end
 
     return ntuple(D) do d
         variablename = grid_variablenames(g)[d]
@@ -158,8 +170,8 @@ function DiscretizedGrid(
     return DiscretizedGrid{D}(Rs, lower_bound, upper_bound, variablenames, base, indextable, includeendpoint)
 end
 
-function DiscretizedGrid(Rs::NTuple{D,Int}; kwargs...) where {D}
-    return DiscretizedGrid(ntuple(Symbol, D), Rs; kwargs...)
+function DiscretizedGrid(Rs::NTuple{D,Int}; variablenames=ntuple(Symbol, D), kwargs...) where {D}
+    return DiscretizedGrid(variablenames, Rs; kwargs...)
 end
 
 function DiscretizedGrid{D}(
@@ -188,10 +200,6 @@ function DiscretizedGrid(
     base::Int=2,
     includeendpoint=false
 ) where D
-    @assert all(Iterators.flatten(indextable)) do index
-        first(index) ∈ variablenames
-    end
-
     Rs = Tuple(map(variablenames) do variablename
         count(index -> first(index) == variablename, Iterators.flatten(indextable))
     end)
@@ -226,7 +234,9 @@ lower_bound(g::DiscretizedGrid) = _convert_to_scalar_if_possible(g.lower_bound)
 grid_origin(g::DiscretizedGrid) = lower_bound(g)
 
 function sitedim(g::DiscretizedGrid, site::Int)::Int
-    @assert site ∈ eachindex(grid_indextable(g))
+    if !(site ∈ eachindex(grid_indextable(g)))
+        throw(DomainError(site, lazy"Site index out of bounds [1, $(length(grid_indextable(g)))]"))
+    end
     return grid_base(g)^length(grid_indextable(g)[site])
 end
 
@@ -243,7 +253,9 @@ grid_step(g::DiscretizedGrid) = _convert_to_scalar_if_possible(
 )
 
 function grid_origcoords(g::DiscretizedGrid, d::Int)
-    @assert 1 ≤ d ≤ ndims(g) "Dimension $d out of bounds"
+    if !(1 ≤ d ≤ ndims(g))
+        throw(DomainError(d, lazy"Dimension $d out of bounds [1, $(ndims(g))]."))
+    end
     start = grid_min(g)[d]
     stop = grid_max(g)[d]
     length = grid_base(g)^grid_Rs(g)[d]
@@ -252,7 +264,7 @@ end
 
 function grid_origcoords(g::DiscretizedGrid, variablename::Symbol)
     d = findfirst(==(variablename), grid_variablenames(g))
-    isnothing(d) && throw(ArgumentError("Variable name :$variablename not found in grid. Available variables: $(grid_variablenames(g))"))
+    isnothing(d) && throw(ArgumentError(lazy"Variable name :$variablename not found in grid. Available variables: $(grid_variablenames(g))"))
     return grid_origcoords(g, d)
 end
 
@@ -270,7 +282,11 @@ end
 
 function grididx_to_origcoord(g::DiscretizedGrid{D}, index) where {D}
     index_tuple = _to_tuple(Val(D), index)
-    @assert all(1 .<= index .<= (grid_base(g) .^ grid_Rs(g))) lazy"Grid-index $index out of bounds [1, $(grid_base(g) .^ grid_Rs(g))]"
+    for d in 1:D
+        if !(1 <= index_tuple[d] <= grid_base(g)^grid_Rs(g)[d])
+            throw(DomainError(index_tuple[d], lazy"Grid index out of bounds [1, $(grid_base(g) ^ grid_Rs(g)[d])]."))
+        end
+    end
 
     res = ntuple(D) do d
         step_d = (g.upper_bound[d] - g.lower_bound[d]) / (grid_base(g)^grid_Rs(g)[d])
@@ -285,7 +301,11 @@ function origcoord_to_grididx(g::DiscretizedGrid{D}, coordinate) where {D}
 
     bounds_lower = lower_bound(g)
     bounds_upper = upper_bound(g)
-    @assert all(bounds_lower .<= coord_tuple .<= bounds_upper) "Coordinate $coord_tuple out of bounds [$bounds_lower, $bounds_upper]"
+    for d in 1:D
+        if !(bounds_lower[d] <= coord_tuple[d] <= bounds_upper[d])
+            throw(DomainError(coord_tuple[d], lazy"Coordinate out of bounds [$(bounds_lower[d]), $(bounds_upper[d])] (dimension $d)."))
+        end
+    end
 
     steps = grid_step(g)
     indices = ntuple(D) do d
@@ -364,11 +384,11 @@ function Base.show(io::IO, ::MIME"text/plain", g::DiscretizedGrid{D}) where D
     print(io, "DiscretizedGrid{$D}")
 
     # Grid resolution and total points
-    total_points = prod(grid_base(g) .^ grid_Rs(g))
-    if D == 1
-        print(io, " with $(grid_base(g)^grid_Rs(g)[1]) grid points")
+    total_points = prod(big(grid_base(g)) .^ grid_Rs(g))
+    if D <= 1
+        print(io, " with $total_points grid point" * (isone(total_points) ? "" : "s"))
     else
-        print(io, " with $(join(grid_base(g) .^ grid_Rs(g), "×")) = $total_points grid points")
+        print(io, " with $(join(big(grid_base(g)) .^ grid_Rs(g), " × ")) = $total_points grid points")
     end
 
     # Variable names (if meaningful)
@@ -434,14 +454,15 @@ function Base.show(io::IO, ::MIME"text/plain", g::DiscretizedGrid{D}) where D
 
     # Tensor structure summary
     num_sites = length(grid_indextable(g))
-    site_dims = [grid_base(g)^length(site) for site in grid_indextable(g)]
-    max_bond_dim = maximum(site_dims)
+    sitedims = Int[sitedim(g, site) for site in 1:num_sites]
 
     print(io, "\n└─ Tensor train: $num_sites sites")
-    if all(d -> d == site_dims[1], site_dims)
-        print(io, " (uniform dimension $(site_dims[1]))")
-    else
-        print(io, " (dimensions: $(join(site_dims, "-")))")
+    if !isempty(sitedims)
+        if allequal(sitedims)
+            print(io, " (uniform dimension $(sitedims[1]))")
+        else
+            print(io, " (dimensions: $(join(sitedims, "-")))")
+        end
     end
 end
 

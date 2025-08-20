@@ -77,12 +77,12 @@ end
     @test QuanticsGrids.origcoord_to_grididx(grid, (0.999, 0.999)) == (4, 4)
 
     # Test coordinates outside bounds should throw errors
-    @test_throws AssertionError QuanticsGrids.origcoord_to_grididx(grid, (-0.1, 0.5))
-    @test_throws AssertionError QuanticsGrids.origcoord_to_grididx(grid, (0.5, -0.1))
-    @test_throws AssertionError QuanticsGrids.origcoord_to_grididx(grid, (1.1, 0.5))
-    @test_throws AssertionError QuanticsGrids.origcoord_to_grididx(grid, (0.5, 1.1))
-    @test_throws AssertionError QuanticsGrids.origcoord_to_grididx(grid, (-0.1, -0.1))
-    @test_throws AssertionError QuanticsGrids.origcoord_to_grididx(grid, (1.1, 1.1))
+    @test_throws DomainError QuanticsGrids.origcoord_to_grididx(grid, (-0.1, 0.5))
+    @test_throws DomainError QuanticsGrids.origcoord_to_grididx(grid, (0.5, -0.1))
+    @test_throws DomainError QuanticsGrids.origcoord_to_grididx(grid, (1.1, 0.5))
+    @test_throws DomainError QuanticsGrids.origcoord_to_grididx(grid, (0.5, 1.1))
+    @test_throws DomainError QuanticsGrids.origcoord_to_grididx(grid, (-0.1, -0.1))
+    @test_throws DomainError QuanticsGrids.origcoord_to_grididx(grid, (1.1, 1.1))
 end
 
 @testitem "origcoord functions - fused indices grid" begin
@@ -364,8 +364,8 @@ end
     outside_lower = (-2.0 - eps, 3.0 - eps)
     outside_upper = (5.0 + eps, 8.0 + eps)
 
-    @test_throws AssertionError QuanticsGrids.origcoord_to_grididx(grid, outside_lower)
-    @test_throws AssertionError QuanticsGrids.origcoord_to_grididx(grid, outside_upper)
+    @test_throws DomainError QuanticsGrids.origcoord_to_grididx(grid, outside_lower)
+    @test_throws DomainError QuanticsGrids.origcoord_to_grididx(grid, outside_upper)
 end
 
 @testitem "performance stress test - rapid conversions" begin
@@ -405,7 +405,7 @@ end
 
     # R=0 dimension should only accept grid index 1
     @test_nowarn grididx_to_quantics(grid, (1, 1))
-    @test_throws AssertionError grididx_to_quantics(grid, (2, 1))
+    @test_throws DomainError grididx_to_quantics(grid, (2, 1))
 
     # All coordinates in R=0 dimension should map to grid index 1
     @test origcoord_to_grididx(grid, (-0.5, 2.0))[1] == 1
@@ -435,5 +435,5 @@ end
     quantics = grididx_to_quantics(grid, (1, 5))
     @test quantics_to_grididx(grid, quantics) == (1, 5)
 
-    @test_throws AssertionError DiscretizedGrid((3, 0); includeendpoint=true)
+    @test_throws ArgumentError DiscretizedGrid((3, 0); includeendpoint=true)
 end

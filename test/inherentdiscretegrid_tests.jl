@@ -139,6 +139,9 @@ end
         @test length(quantics) == 2 * R  # Interleaved should have 2*R quantics
         @test all(1 .<= quantics .<= base)  # Each quantics should be in valid range
     end
+
+    quantics_wronglength = [1, 2, 3]
+    @test_throws ArgumentError QuanticsGrids.quantics_to_grididx(grid_interleaved, quantics_wronglength)
 end
 
 @testitem "InherentDiscreteGrid quantics_to_origcoord and origcoord_to_quantics" begin
@@ -416,7 +419,7 @@ end
     R = 3
     origin = (5, 10)
 
-    @test_throws AssertionError InherentDiscreteGrid{2}(R, origin; step=(0, 1))
+    @test_throws ArgumentError InherentDiscreteGrid{2}(R, origin; step=(0, 1))
 end
 
 @testitem "InherentDiscreteGrid with custom indextable - basic" begin
@@ -490,6 +493,8 @@ end
     for (i, expected_dim) in enumerate(expected_localdims)
         @test QuanticsGrids.sitedim(grid, i) == expected_dim
     end
+
+    @test_throws DomainError QuanticsGrids.sitedim(grid, length(expected_localdims) + 1)
 
     # Test coordinate conversions for various grid indices
     test_grididx = [(1, 1, 1), (2, 3, 1), (9, 27, 27), (5, 10, 15)]
@@ -728,7 +733,7 @@ end
         [(:z, 1)]  # z is not in variablenames
     ]
 
-    @test_throws AssertionError InherentDiscreteGrid(variablenames, invalid_indextable_unknown;
+    @test_throws ArgumentError InherentDiscreteGrid(variablenames, invalid_indextable_unknown;
         origin=(1, 1), step=(1, 1))
 end
 
@@ -892,29 +897,35 @@ end
     # Test that constructors properly validate input parameters
 
     # Test invalid base
-    @test_throws AssertionError InherentDiscreteGrid((3, 2); base=1)  # base must be > 1
-    @test_throws AssertionError InherentDiscreteGrid((3, 2); base=0)
+    @test_throws ArgumentError InherentDiscreteGrid((3, 2); base=1)  # base must be > 1
+    @test_throws ArgumentError InherentDiscreteGrid((3, 2); base=0)
 
     # Test mismatched dimensions
     @test_throws MethodError InherentDiscreteGrid((3, 2); origin=(1, 1, 1))  # wrong origin length
     @test_throws MethodError InherentDiscreteGrid((3, 2); step=(1, 1, 1))    # wrong step length
 
     # Test negative R values
-    @test_throws AssertionError InherentDiscreteGrid((-1, 2))  # negative R
-    @test_throws AssertionError InherentDiscreteGrid((3, -2))
+    @test_throws ArgumentError InherentDiscreteGrid((-1, 2))  # negative R
+    @test_throws ArgumentError InherentDiscreteGrid((3, -2))
+
+    # Test too large R value
+    R = 62
+    @test (
+        try
+            InherentDiscreteGrid((R,))
+            true
+        catch
+            false
+        end
+    )
+    R = 63
+    @test_throws ArgumentError InherentDiscreteGrid((R,))
+
+    # Test repeated variable names
+    @test_throws ArgumentError InherentDiscreteGrid((3, 3); variablenames=(:x, :x))
 
     # Test invalid unfoldingscheme
-    @test_throws AssertionError InherentDiscreteGrid((3, 2); unfoldingscheme=:invalid)
-
-    # Test zero R (might be edge case depending on implementation)
-    try
-        grid_zero = InherentDiscreteGrid((0, 2))
-        # If it works, verify it behaves sensibly
-        @test grid_zero.Rs == (0, 2)
-    catch err
-        # If it throws an error, verify it's meaningful
-        @test err isa AssertionError || err isa DomainError
-    end
+    @test_throws ArgumentError InherentDiscreteGrid((3, 2); unfoldingscheme=:invalid)
 end
 
 @testitem "InherentDiscreteGrid constructor compatibility with existing patterns" begin
@@ -989,4 +1000,8 @@ end
     expected_origcoord = (origin_single, origin_single + step_single * 1, origin_single + step_single * 2)
     actual_origcoord = QuanticsGrids.grididx_to_origcoord(grid_broadcast, grididx)
     @test actual_origcoord == expected_origcoord
+end
+
+@testitem "InherentDiscreteGrid 0-dimensional" begin
+    g = InherentDiscreteGrid(())
 end
