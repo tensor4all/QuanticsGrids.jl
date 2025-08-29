@@ -79,7 +79,7 @@
         end
     end
 
-    @testset "InherentDiscreteGrid" for unfoldingscheme in [:interleaved, :fused],
+    @testset "InherentDiscreteGrid" for unfoldingscheme in [:interleaved, :fused, :serial, :meander],
         step in [(1, 1, 1), (1, 1, 2)],
         origin in [(1, 1, 1), (1, 1, 2)]
 
@@ -87,7 +87,7 @@
         @test QuanticsGrids.grid_min(m) == origin
         @test QuanticsGrids.grid_step(m) == step
 
-        if unfoldingscheme === :interleaved
+        if unfoldingscheme === :interleaved || unfoldingscheme === :serial || unfoldingscheme === :meander
             @test QuanticsGrids.localdimensions(m) == fill(2, 3 * 5)
         else
             @test QuanticsGrids.localdimensions(m) == fill(2^3, 5)
@@ -108,7 +108,7 @@
         end
     end
 
-    @testset "DiscretizedGrid" for unfoldingscheme in [:interleaved, :fused]
+    @testset "DiscretizedGrid" for unfoldingscheme in [:interleaved, :fused, :serial, :meander]
         @testset "1D" begin
             unfoldingscheme = :interleaved
 
@@ -134,7 +134,7 @@
             @test QuanticsGrids.grid_step(g) == 0.059375
         end
 
-        @testset "1D (includeendpoint)" for unfoldingscheme in [:interleaved, :fused]
+        @testset "1D (includeendpoint)" for unfoldingscheme in [:interleaved, :fused, :serial, :meander]
             R = 5
             a = 0.0
             b = 1.0
@@ -159,7 +159,7 @@
             @test only(QuanticsGrids.quantics_to_origcoord(g, fill(2, R))) == b
         end
 
-        @testset "2D" for unfoldingscheme in [:interleaved, :fused]
+        @testset "2D" for unfoldingscheme in [:interleaved, :fused, :serial, :meander]
             R = 5
             d = 2
             a = (0.1, 0.1)
@@ -167,7 +167,7 @@
             dx = (b .- a) ./ 2^R
             g = QuanticsGrids.DiscretizedGrid{d}(R, a, b; unfoldingscheme)
 
-            if unfoldingscheme === :interleaved
+            if unfoldingscheme === :interleaved || unfoldingscheme === :serial || unfoldingscheme === :meander
                 @test QuanticsGrids.localdimensions(g) == fill(2, d * R)
             else
                 @test QuanticsGrids.localdimensions(g) == fill(2^d, R)
@@ -197,7 +197,7 @@
             @test_throws "Bound Error:" QuanticsGrids.origcoord_to_grididx(g, (3.0, 3.0))
         end
 
-        @testset "2D (includeendpoint)" for unfoldingscheme in [:interleaved, :fused]
+        @testset "2D (includeendpoint)" for unfoldingscheme in [:interleaved, :fused, :serial, :meander]
             R = 5
             d = 2
             a = (0.1, 0.1)
@@ -213,7 +213,7 @@
             @test g.includeendpoint
             @test QuanticsGrids.grid_step(g) == dx
 
-            if unfoldingscheme === :interleaved
+            if unfoldingscheme === :interleaved || unfoldingscheme === :serial || unfoldingscheme === :meander
                 @test QuanticsGrids.localdimensions(g) == fill(2, d * R)
             else
                 @test QuanticsGrids.localdimensions(g) == fill(2^d, R)

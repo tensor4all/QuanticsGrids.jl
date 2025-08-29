@@ -104,7 +104,118 @@ function deinterleave_dimensions!(
 end
 
 """
-Convert a fused quantics representation to an unfused quantics representation
+    serialize_dimensions(digitlists...)
+
+Sequences the indices of all digitlists into one long digitlist. Use this for
+quantics representation of multidimensional objects without fusing indices.
+Inverse of [`deserialize_dimensions`](@ref).
+"""
+function serialize_dimensions(digitlists...)::Vector{Int}
+    results = Vector{Int}(undef, length(digitlists[1]) * length(digitlists))
+    return serialize_dimensions!(results, digitlists...)
+end
+
+
+function serialize_dimensions!(
+    serial_digitlist::AbstractArray{<:Integer},
+    digitlists...,
+)
+    l = length(digitlists[1])
+    @inbounds for i in eachindex(digitlists)
+        copyto!(@view(serial_digitlist[(i-1)*l+1:i*l]), digitlists[i])
+    end
+    return serial_digitlist
+end
+
+"""
+    deserialize_dimensions(digitlist, d)
+
+Reverses the sequencing of bits, i.e. yields digitlists for each dimension from
+a long serialized digitlist. Inverse of [`serialize_dimensions`](@ref).
+"""
+function deserialize_dimensions(digitlist, d)
+    l = length(digitlist) ÷ d
+    return [digitlist[(i-1)*l+1:i*l] for i = 1:d]
+end
+
+function deserialize_dimensions!(
+    deserialized_digitlists::AbstractArray{<:AbstractArray{I}},
+    digitlist,
+) where {I<:Integer}
+    d, l = length(deserialized_digitlists), length(deserialized_digitlists[1])
+    @inbounds for i in Base.OneTo(d)
+        @. deserialized_digitlists[i] = digitlist[(i-1)*l+1:i*l]
+    end
+    return deserialized_digitlists
+end
+
+"""
+    meander_dimensions(digitlists...)
+
+Sequences the indices of all digitlists into one long digitlist. Use this for
+quantics representation of multidimensional objects without fusing indices.
+Inverse of [`demeander_dimensions`](@ref).
+"""
+function meander_dimensions(digitlists...)::Vector{Int}
+    results = Vector{Int}(undef, length(digitlists[1]) * length(digitlists))
+    meander_dimensions!(results, digitlists...)
+    return results
+end
+
+
+function meander_dimensions!(
+    meander_digitlist::AbstractArray{<:Integer},
+    digitlists...,
+)
+    l = length(digitlists[1])
+    for (i, digits) in enumerate(digitlists)
+        if isodd(i)
+            # odd dimension index (1-based): reverse
+            @inbounds for j = 1:l
+                meander_digitlist[(i-1)*l + j] = digits[l - j + 1]
+            end
+        else
+            # even dimension index: normal order
+            copyto!(@view(meander_digitlist[(i-1)*l+1:i*l]), digits)
+        end
+    end
+    return meander_digitlist
+end
+
+"""
+    demeander_dimensions(digitlist, d)
+
+Reverses the sequencing of bits, i.e. yields digitlists for each dimension from
+a long meandered digitlist. Inverse of [`meander_dimensions`](@ref).
+"""
+function demeander_dimensions(digitlist, d)
+    result = Vector{Vector{Int}}(undef, d)
+    l = length(digitlist) ÷ d
+    @inbounds for i in Base.OneTo(d)
+        segment = digitlist[(i-1)*l+1:i*l]
+        result[i] = isodd(i) ? reverse(segment) : segment
+    end
+    return result
+end
+
+function demeander_dimensions!(
+    demeandered_digitlists::AbstractArray{<:AbstractArray{I}},
+    digitlist,
+) where {I<:Integer}
+    d, l = length(demeandered_digitlists), length(demeandered_digitlists[1])
+    @inbounds for i in Base.OneTo(d)
+        segment = @view(digitlist[(i-1)*l+1:i*l])
+        if isodd(i)
+            demeandered_digitlists[i] = reverse(segment)
+        else
+            demeandered_digitlists[i] = Vector(segment)
+        end
+    end
+    return demeandered_digitlists
+end
+
+"""
+Convert a fused quantics representation to an unfused quantics interleaved representation
 """
 function fused_to_interleaved(
     digitlist::AbstractVector{T},
@@ -113,9 +224,29 @@ function fused_to_interleaved(
 )::Vector{T} where {T<:Integer}
     return interleave_dimensions(unfuse_dimensions(digitlist, d; base = base)...)
 end
+"""
+Convert a fused quantics representation to an unfused quantics serial representation
+"""
+function fused_to_serial(
+    digitlist::AbstractVector{T},
+    d;
+    base = 2,
+)::Vector{T} where {T<:Integer}
+    return serialize_dimensions(unfuse_dimensions(digitlist, d; base = base)...)
+end
+"""
+Convert a fused quantics representation to an unfused quantics meander representation
+"""
+function fused_to_meander(
+    digitlist::AbstractVector{T},
+    d;
+    base = 2,
+)::Vector{T} where {T<:Integer}
+    return meander_dimensions(unfuse_dimensions(digitlist, d; base = base)...)
+end
 
 """
-Convert an unfused quantics representation to an fused quantics representation
+Convert an unfused quantics interleaved representation to an fused quantics representation
 """
 function interleaved_to_fused(
     digitlist::AbstractVector{T};
@@ -124,6 +255,30 @@ function interleaved_to_fused(
 )::Vector{T} where {T<:Integer}
     fused_digitlist = Vector{T}(undef, length(digitlist) ÷ d)
     fuse_dimensions!(fused_digitlist, deinterleave_dimensions(digitlist, d)...)
+    return fused_digitlist
+end
+"""
+Convert an unfused quantics serial representation to an fused quantics representation
+"""
+function serial_to_fused(
+    digitlist::AbstractVector{T};
+    base::Integer = 2,
+    d::Int = 1,
+)::Vector{T} where {T<:Integer}
+    fused_digitlist = Vector{T}(undef, length(digitlist) ÷ d)
+    fuse_dimensions!(fused_digitlist, deserialize_dimensions(digitlist, d)...)
+    return fused_digitlist
+end
+"""
+Convert an unfused quantics meander representation to an fused quantics representation
+"""
+function meander_to_fused(
+    digitlist::AbstractVector{T};
+    base::Integer = 2,
+    d::Int = 1,
+)::Vector{T} where {T<:Integer}
+    fused_digitlist = Vector{T}(undef, length(digitlist) ÷ d)
+    fuse_dimensions!(fused_digitlist, demeander_dimensions(digitlist, d)...)
     return fused_digitlist
 end
 
@@ -187,6 +342,18 @@ function quantics_to_index(
 )::NTuple{d,Int} where {d}
     if unfoldingscheme === :fused
         return quantics_to_index_fused(digitlist, base = base, dims = dims)
+    elseif unfoldingscheme === :serial
+        return quantics_to_index_fused(
+            serial_to_fused(digitlist; base = base, d = d),
+            base = base,
+            dims = dims,
+        )
+    elseif unfoldingscheme === :meander
+        return quantics_to_index_fused(
+            meander_to_fused(digitlist; base = base, d = d),
+            base = base,
+            dims = dims,
+        )
     else
         return quantics_to_index_fused(
             interleaved_to_fused(digitlist; base = base, d = d),
