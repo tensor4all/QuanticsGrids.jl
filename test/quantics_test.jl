@@ -2,6 +2,8 @@
     import QuanticsGrids: fuse_dimensions, unfuse_dimensions
     import QuanticsGrids: quantics_to_index_fused, index_to_quantics
     import QuanticsGrids: interleave_dimensions, deinterleave_dimensions
+    import QuanticsGrids: serialize_dimensions, deserialize_dimensions
+    import QuanticsGrids: meander_dimensions, demeander_dimensions
 
     @testset "quantics representation" begin
         @testset "fuse_dimensions" begin
@@ -98,6 +100,44 @@
                   [[1, 1, 1, 1], [2, 3, 4, 5]]
             @test deinterleave_dimensions([1, 2, 11, 1, 3, 12, 1, 4, 13, 1, 5, 14], 3) ==
                   [[1, 1, 1, 1], [2, 3, 4, 5], [11, 12, 13, 14]]
+        end
+
+        @testset "serial dimensions" begin
+            @test [1, 1, 1, 1] == serialize_dimensions([1, 1, 1, 1])
+            @test [1, 1, 1, 1, 1, 1, 1, 1] ==
+                  serialize_dimensions([1, 1, 1, 1], [1, 1, 1, 1])
+            @test [1, 1, 1, 1, 2, 3, 4, 5] ==
+                  serialize_dimensions([1, 1, 1, 1], [2, 3, 4, 5])
+            @test [1, 1, 1, 1, 2, 3, 4, 5, 11, 12, 13, 14] ==
+                  serialize_dimensions([1, 1, 1, 1], [2, 3, 4, 5], [11, 12, 13, 14])
+        end
+
+        @testset "deserial dimensions" begin
+            @test deserialize_dimensions([1, 1, 1, 1], 1) == [[1, 1, 1, 1]]
+            @test deserialize_dimensions([1, 1, 1, 1], 2) == [[1, 1], [1, 1]]
+            @test deserialize_dimensions([1, 2, 1, 3, 1, 4, 1, 5], 2) ==
+                  [[1, 2, 1, 3], [1, 4, 1, 5]]
+            @test deserialize_dimensions([1, 2, 11, 1, 3, 12, 1, 4, 13, 1, 5, 14], 3) ==
+                  [[1, 2, 11, 1], [3, 12, 1, 4], [13, 1, 5, 14]]
+        end
+
+        @testset "meander dimensions" begin
+            @test [1, 1, 1, 1] == meander_dimensions([1, 1, 1, 1])
+            @test [1, 1, 1, 1, 1, 1, 1, 1] ==
+                  meander_dimensions([1, 1, 1, 1], [1, 1, 1, 1])
+            @test [1, 1, 1, 1, 2, 3, 4, 5] ==
+                  meander_dimensions([1, 1, 1, 1], [2, 3, 4, 5])
+            @test [1, 1, 1, 1, 2, 3, 4, 5, 11, 12, 13, 14] ==
+                  meander_dimensions([1, 1, 1, 1], [2, 3, 4, 5], [14, 13, 12, 11])
+        end
+
+        @testset "demeander dimensions" begin
+            @test demeander_dimensions([1, 1, 1, 1], 1) == [[1, 1, 1, 1]]
+            @test demeander_dimensions([1, 1, 1, 1], 2) == [[1, 1], [1, 1]]
+            @test demeander_dimensions([1, 2, 1, 3, 1, 4, 1, 5], 2) ==
+                  [[3, 1, 2, 1], [1, 4, 1, 5]]
+            @test demeander_dimensions([1, 2, 11, 1, 3, 12, 1, 4, 13, 1, 5, 14], 3) ==
+                  [[1, 11, 2, 1], [3, 12, 1, 4], [14, 5, 1, 13]]
         end
     end
 end
