@@ -68,6 +68,18 @@ grid index => quantics
 function grididx_to_quantics(g::Grid{d}, grididx::NTuple{d,Int}) where {d}
     if g.unfoldingscheme === :fused
         return index_to_quantics_fused(grididx, numdigits = g.R, base = g.base)
+    elseif g.unfoldingscheme === :serial
+        return fused_to_serial(
+            index_to_quantics_fused(grididx, numdigits = g.R, base = g.base),
+            d,
+            base = g.base,
+        )
+    elseif g.unfoldingscheme === :meander
+        return fused_to_meander(
+            index_to_quantics_fused(grididx, numdigits = g.R, base = g.base),
+            d,
+            base = g.base,
+        )
     else
         return fused_to_interleaved(
             index_to_quantics_fused(grididx, numdigits = g.R, base = g.base),
@@ -155,7 +167,7 @@ struct InherentDiscreteGrid{d} <: Grid{d}
         step::Union{NTuple{d,Int},Int} = 1,
     ) where {d}
         _rangecheck_R(R; base = base)
-        unfoldingscheme in (:fused, :interleaved) ||
+        unfoldingscheme in (:fused, :interleaved, :serial, :meander) ||
             error("Invalid unfolding scheme: $unfoldingscheme")
         origin_ = origin isa Int ? ntuple(i -> origin, d) : origin
         step_ = step isa Int ? ntuple(i -> step, d) : step
@@ -305,7 +317,7 @@ struct DiscretizedGrid{d} <: Grid{d}
         includeendpoint::Bool = false,
     ) where {d}
         _rangecheck_R(R; base = base)
-        unfoldingscheme in (:fused, :interleaved) ||
+        unfoldingscheme in (:fused, :interleaved, :serial, :meander) ||
             error("Invalid unfolding scheme: $unfoldingscheme")
         return new(
             R,
