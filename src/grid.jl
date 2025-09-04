@@ -65,14 +65,29 @@ function _build_lookup_table(Rs::NTuple{D,Int}, indextable::Vector{Vector{Tuple{
         Vector{Tuple{Int,Int}}(undef, Rs[d])
     end
 
+    index_visited = [fill(false, Rs[d]) for d in 1:D]
+
     for (site_idx, quanticsindices) in pairs(indextable)
         for (pos_in_site, qindex) in pairs(quanticsindices)
             variablename, bitnumber = qindex
             var_idx = findfirst(==(variablename), variablenames)
             if isnothing(var_idx)
-                throw(ArgumentError(lazy"Indextable contains unknown index $qindex. Valid variablenames are $variablenames."))
+                throw(ArgumentError(lazy"Index table contains unknown index $qindex. Valid variablenames are $variablenames."))
+            elseif bitnumber > Rs[var_idx]
+                throw(ArgumentError(lazy"Index table contains quantics index $bitnumber of variable $variablename, but it must be smaller than or equal to the number of quantics indices for that variable, which is $(Rs[var_idx])."))
+            elseif index_visited[var_idx][bitnumber]
+                throw(ArgumentError(lazy"Index table contains quantics index $bitnumber of variable $variablename more than once."))
             end
+
             lookup_table[var_idx][bitnumber] = (site_idx, pos_in_site)
+            index_visited[var_idx][bitnumber] = true
+        end
+    end
+
+    for (var_idx, visited) in enumerate(index_visited)
+        bitnumber = findfirst(==(false), visited)
+        if !isnothing(bitnumber)
+            throw(ArgumentError(lazy"Index table contains no site for quantics index $bitnumber of variable $(variablenames[var_idx])."))
         end
     end
 
