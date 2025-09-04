@@ -1,446 +1,406 @@
-# Grid for d-dimensional space
-abstract type Grid{d} end
+struct InherentDiscreteGrid{D} <: Grid{D}
+    Rs::NTuple{D,Int}
+    origin::NTuple{D,Int}
+    step::NTuple{D,Int}
+    variablenames::NTuple{D,Symbol}
+    base::Int
+    indextable::Vector{Vector{Tuple{Symbol,Int}}}
 
+    # Lookup table: lookup_table[variablename_index][bitnumber] -> (site_index, position_in_site)
+    lookup_table::NTuple{D,Vector{Tuple{Int,Int}}}
+    maxgrididx::NTuple{D,Int}
+
+    function InherentDiscreteGrid{D}(
+        Rs::NTuple{D,Int},
+        origin::NTuple{D,Int},
+        step::NTuple{D,Int},
+        variablenames::NTuple{D,Symbol},
+        base::Int,
+        indextable::Vector{Vector{Tuple{Symbol,Int}}}
+    ) where {D}
+        if !(D isa Int)
+            throw(ArgumentError(lazy"Got dimension $D, which is not an Int."))
+        end
+        if base <= 1
+            throw(ArgumentError(lazy"Got base = $base. base must be at least 2."))
+        end
+        for d in 1:D
+            if !(step[d] >= 1)
+                throw(ArgumentError(lazy"Got step[$d] = $(step[d]). step must be at least 1."))
+            end
+            if !rangecheck_R(Rs[d]; base)
+                throw(ArgumentError(lazy"Got Rs[$d] = $(Rs[d]) with base = $base. For all gridindices from 1 to base^R to fit into an Int, we must have base ^ R <= typemax(Int)"))
+            end
+        end
+        if !allunique(variablenames)
+            throw(ArgumentError(lazy"Got variablenames = $variablenames. variablenames must be unique."))
+        end
+
+        lookup_table = _build_lookup_table(Rs, indextable, variablenames)
+        maxgrididx = map(R -> base^R, Rs)
+
+        return new{D}(Rs, origin, step, variablenames, base, indextable, lookup_table, maxgrididx)
+    end
+end
+
+# ============================================================================
+# Helper/utility functions
+# ============================================================================
 
 _convert_to_scalar_if_possible(x) = x
 _convert_to_scalar_if_possible(x::NTuple{1,T}) where {T} = first(x)
 
-_to_tuple(::Val{d}, x::NTuple{d,T}) where {d,T} = x
+_to_tuple(::Val{d}, x::NTuple{d}) where {d} = x
 _to_tuple(::Val{d}, x) where {d} = ntuple(i -> x, d)
 
-function digitmax(d, base, unfoldingscheme::Symbol)
-    if unfoldingscheme === :fused
-        return base^d
-    else
-        return base
+default_step(::Val{D}) where D = ntuple(Returns(1), D)
+
+default_origin(::Val{D}) where D = ntuple(Returns(1), D)
+
+function _build_lookup_table(Rs::NTuple{D,Int}, indextable::Vector{Vector{Tuple{Symbol,Int}}}, variablenames::NTuple{D,Symbol}) where D
+    lookup_table = ntuple(D) do d
+        if Rs[d] < 0
+            throw(ArgumentError(lazy"Got Rs[$d] = $(Rs[d]). Rs must be non-negative."))
+        end
+        Vector{Tuple{Int,Int}}(undef, Rs[d])
+    end
+
+    index_visited = [fill(false, Rs[d]) for d in 1:D]
+
+    for (site_idx, quanticsindices) in pairs(indextable)
+        for (pos_in_site, qindex) in pairs(quanticsindices)
+            variablename, bitnumber = qindex
+            var_idx = findfirst(==(variablename), variablenames)
+            if isnothing(var_idx)
+                throw(ArgumentError(lazy"Index table contains unknown index $qindex. Valid variablenames are $variablenames."))
+            elseif bitnumber > Rs[var_idx]
+                throw(ArgumentError(lazy"Index table contains quantics index $bitnumber of variable $variablename, but it must be smaller than or equal to the number of quantics indices for that variable, which is $(Rs[var_idx])."))
+            elseif index_visited[var_idx][bitnumber]
+                throw(ArgumentError(lazy"Index table contains quantics index $bitnumber of variable $variablename more than once."))
+            end
+
+            lookup_table[var_idx][bitnumber] = (site_idx, pos_in_site)
+            index_visited[var_idx][bitnumber] = true
+        end
+    end
+
+    for (var_idx, visited) in enumerate(index_visited)
+        bitnumber = findfirst(==(false), visited)
+        if !isnothing(bitnumber)
+            throw(ArgumentError(lazy"Index table contains no site for quantics index $bitnumber of variable $(variablenames[var_idx])."))
+        end
+    end
+
+    return lookup_table
+end
+
+function rangecheck_R(R::Int; base::Int=2)::Bool
+    # For all gridindices from 1 to base^R to fit into an Int64,
+    # we must have base ^ R <= typemax(Int)
+    result = 1
+    for _ in 1:R
+        result <= typemax(Int) ÷ base || return false
+        result *= base
+    end
+    return true
+end
+
+function _build_indextable(variablenames::NTuple{D,Symbol}, Rs::NTuple{D,Int}, unfoldingscheme::Symbol) where D
+    if !(unfoldingscheme in (:interleaved, :fused))
+        throw(ArgumentError(lazy"Got unfoldingscheme = $unfoldingscheme. Supported are :interleaved and :fused."))
+    end
+    indextable = Vector{Tuple{Symbol,Int}}[]
+
+    for bitnumber in 1:maximum(Rs; init=0)
+        if unfoldingscheme === :interleaved
+            _add_interleaved_indices!(indextable, variablenames, Rs, bitnumber)
+        elseif unfoldingscheme === :fused
+            _add_fused_indices!(indextable, variablenames, Rs, bitnumber)
+        end
+    end
+
+    return indextable
+end
+
+function _add_interleaved_indices!(indextable, variablenames::NTuple{D,Symbol}, Rs::NTuple{D,Int}, bitnumber) where D
+    for d in 1:D
+        bitnumber ∈ 1:Rs[d] || continue
+        qindex = (variablenames[d], bitnumber)
+        push!(indextable, [qindex])
     end
 end
 
-function quanticslength(R, d, unfoldingscheme::Symbol)
-    if unfoldingscheme === :fused
-        return R
-    else
-        return R * d
+function _add_fused_indices!(indextable, variablenames::NTuple{D,Symbol}, Rs::NTuple{D,Int}, bitnumber) where D
+    indices_bitnumber = Tuple{Symbol,Int}[]
+    # Add dimensions in reverse order to match DiscretizedGrid convention
+    # where the first dimension varies fastest in fused quantics
+    for d in D:-1:1
+        bitnumber ∈ 1:Rs[d] || continue
+        qindex = (variablenames[d], bitnumber)
+        push!(indices_bitnumber, qindex)
+    end
+    if !isempty(indices_bitnumber)
+        push!(indextable, indices_bitnumber)
     end
 end
 
-function localdimensions(g::Grid{d}) where {d}
-    return fill(
-        digitmax(d, g.base, g.unfoldingscheme),
-        quanticslength(g.R, d, g.unfoldingscheme),
-    )
-end
+function _quantics_to_grididx_general(g::InherentDiscreteGrid{D}, quantics) where D
+    base = g.base
 
-function _rangecheck_R(R; base = 2)::Int
-    base * (BigInt(base)^R - 1) ÷ (base - 1) <= typemax(Int) ||
-        error("R too large for base $base")
-end
+    return ntuple(D) do d
+        grididx = 1
+        R_d = g.Rs[d]
 
-#===
-Conversion between grid index, original coordinate, quantics
+        for bitnumber in 1:R_d
+            site_idx, pos_in_site = g.lookup_table[d][bitnumber]
+            quantics_val = quantics[site_idx]
+            site_len = length(g.indextable[site_idx])
 
-* grid index => original coordinate (generic)
-* grid index => quantics (generic)
+            temp = quantics_val - 1
+            for _ in 1:(site_len-pos_in_site)
+                temp = div(temp, base)
+            end
+            digit = temp % base
 
-* original coordinate => grid index (implemented for each grid type)
-* original coordinate => quantics (generic)
-
-* quantics => grididx (XXXX)
-* quantics => origcoord (generic)
-===#
-
-"""
-grid index => original coordinate
-"""
-function grididx_to_origcoord(g::Grid{d}, index::NTuple{d,Int}) where {d}
-    all(1 .<= index .<= g.base^g.R) || error("1 <= $index <= g.base^g.R")
-    return _convert_to_scalar_if_possible((index .- 1) .* grid_step(g) .+ grid_min(g))
-end
-
-"""
-grid index => original coordinate
-"""
-grididx_to_origcoord(g::Grid{1}, index::Int) = grididx_to_origcoord(g, (index,))
-
-"""
-grid index => quantics
-"""
-function grididx_to_quantics(g::Grid{d}, grididx::NTuple{d,Int}) where {d}
-    if g.unfoldingscheme === :fused
-        return index_to_quantics_fused(grididx, numdigits = g.R, base = g.base)
-    else
-        return fused_to_interleaved(
-            index_to_quantics_fused(grididx, numdigits = g.R, base = g.base),
-            d,
-            base = g.base,
-        )
+            grididx += digit * base^(R_d - bitnumber)
+        end
+        grididx
     end
 end
 
-"""
-grid index => quantics
-"""
-grididx_to_quantics(g::Grid{1}, grididx::Int) = grididx_to_quantics(g, (grididx,))
+function _quantics_to_grididx_base2(g::InherentDiscreteGrid{D}, quantics) where D
+    return ntuple(D) do d
+        grididx = 0
+        R_d = g.Rs[d]
 
-
-"""
-original coordinate => quantics
-"""
-function origcoord_to_quantics(g::Grid{d}, coordinate) where {d}
-    return grididx_to_quantics(g, origcoord_to_grididx(g, _to_tuple(Val(d), coordinate)))
-end
-
-
-"""
-quantics => grid index
-"""
-function quantics_to_grididx(g::Grid{d}, bitlist) where {d}
-    (all(1 .<= bitlist) && all(bitlist .<= digitmax(d, g.base, g.unfoldingscheme))) ||
-        error("Range error for bitlist: $bitlist")
-    quanticslength(g.R, d, g.unfoldingscheme) == length(bitlist) ||
-        error("Length error for bitlist: $bitlist")
-
-    return _convert_to_scalar_if_possible(
-        quantics_to_index(
-            bitlist;
-            base = g.base,
-            dims = Val(d),
-            unfoldingscheme = g.unfoldingscheme,
-        ),
-    )
-end
-
-
-"""
-quantics => original coordinate system
-"""
-function quantics_to_origcoord(g::Grid{d}, bitlist) where {d}
-    return _convert_to_scalar_if_possible(
-        grididx_to_origcoord(g, quantics_to_grididx(g, bitlist)),
-    )
-end
-
-
-"""
-Make a wrapper function that takes a bitlist as input
-"""
-function quanticsfunction(::Type{T}, g::Grid{d}, f::Function)::Function where {T,d}
-    function _f(bitlist)::T
-        return f(quantics_to_origcoord(g, bitlist)...)
+        for bitnumber in 1:R_d
+            site_idx, pos_in_site = g.lookup_table[d][bitnumber]
+            bit_position = length(g.indextable[site_idx]) - pos_in_site
+            digit = ((quantics[site_idx] - 1) >> bit_position) & 1
+            grididx |= digit << (R_d - bitnumber)
+        end
+        grididx + 1
     end
-    return _f
 end
 
+function _grididx_to_quantics_general!(result::Vector{Int}, g::InherentDiscreteGrid{D}, grididx::NTuple{D,Int}) where D
+    base = g.base
 
-@doc raw"""
-The InherentDiscreteGrid struct represents a grid for inherently discrete data.
-The grid contains values at specific,
-equally spaced points, but these values do not represent discretized versions
-of continuous data. Instead, they represent individual data points that are
-inherently discrete.
-The linear size of the mesh is ``base^R``, where ``base`` defaults to 2.
-"""
-struct InherentDiscreteGrid{d} <: Grid{d}
-    R::Int
-    origin::NTuple{d,Int}
-    base::Int
-    unfoldingscheme::Symbol
-    step::NTuple{d,Int}
+    @inbounds for d in 1:D
+        zero_based_idx = grididx[d] - 1
+        R_d = g.Rs[d]
 
-    function InherentDiscreteGrid{d}(
-        R::Int,
-        origin::Union{NTuple{d,Int},Int};
-        base::Integer = 2,
-        unfoldingscheme::Symbol = :fused,
-        step::Union{NTuple{d,Int},Int} = 1,
-    ) where {d}
-        _rangecheck_R(R; base = base)
-        unfoldingscheme in (:fused, :interleaved) ||
-            error("Invalid unfolding scheme: $unfoldingscheme")
-        origin_ = origin isa Int ? ntuple(i -> origin, d) : origin
-        step_ = step isa Int ? ntuple(i -> step, d) : step
-        new(R, origin_, base, unfoldingscheme, step_)
+        for bitnumber in 1:R_d
+            site_idx, pos_in_site = g.lookup_table[d][bitnumber]
+            site_length = length(g.indextable[site_idx])
+
+            bit_position = R_d - bitnumber
+            digit = (zero_based_idx ÷ (base^bit_position)) % base
+
+            power = site_length - pos_in_site
+            result[site_idx] += digit * (base^power)
+        end
     end
+end
 
+function _grididx_to_quantics_base2!(result::Vector{Int}, g::InherentDiscreteGrid{D}, grididx::NTuple{D,Int}) where D
+    @inbounds for d in 1:D
+        zero_based_idx = grididx[d] - 1
+        R_d = g.Rs[d]
+
+        for bitnumber in 1:R_d
+            site_idx, pos_in_site = g.lookup_table[d][bitnumber]
+            site_length = length(g.indextable[site_idx])
+
+            bit_position = R_d - bitnumber
+            digit = (zero_based_idx >> bit_position) & 1
+
+            power = site_length - pos_in_site
+            result[site_idx] += digit << power
+        end
+    end
+end
+
+# ============================================================================
+# Constructors
+# ============================================================================
+
+function InherentDiscreteGrid{D}(
+    Rs,
+    origin=default_origin(Val(D));
+    unfoldingscheme=:fused,
+    step=default_step(Val(D)),
+    base=2
+) where D
+    Rs = _to_tuple(Val(D), Rs)
+    origin = _to_tuple(Val(D), origin)
+    step = _to_tuple(Val(D), step)
+    variablenames = ntuple(Symbol, D)
+    indextable = _build_indextable(variablenames, Rs, unfoldingscheme)
+    InherentDiscreteGrid{D}(Rs, origin, step, variablenames, base, indextable)
 end
 
 function InherentDiscreteGrid(
-    R::Int,
-    origin::Int;
-    base::Integer = 2,
-    unfoldingscheme::Symbol = :fused,
-    step::Int = 1,
-)
-    return InherentDiscreteGrid{1}(
-        R,
-        origin;
-        base = base,
-        unfoldingscheme = unfoldingscheme,
-        step = step,
-    )
+    variablenames::NTuple{D,Symbol},
+    indextable::Vector{Vector{Tuple{Symbol,Int}}};
+    origin=default_origin(Val(D)),
+    step=default_step(Val(D)),
+    base=2
+) where D
+    Rs = Tuple(map(variablenames) do variablename
+        count(index -> first(index) == variablename, Iterators.flatten(indextable))
+    end)
+
+    return InherentDiscreteGrid{D}(Rs, origin, step, variablenames, base, indextable)
 end
 
 function InherentDiscreteGrid(
-    R::Int,
-    origin::NTuple{N,Int};
-    base::Integer = 2,
-    unfoldingscheme::Symbol = :fused,
-    step::Union{Int,NTuple{N,Int}} = 1,
-) where {N}
-    return InherentDiscreteGrid{N}(
-        R,
-        origin;
-        base = base,
-        unfoldingscheme = unfoldingscheme,
-        step = step,
-    )
+    variablenames::NTuple{D,Symbol},
+    Rs::NTuple{D,Int};
+    origin=default_origin(Val(D)),
+    step=default_step(Val(D)),
+    base=2,
+    unfoldingscheme=:fused
+) where {D}
+    origin = _to_tuple(Val(D), origin)
+    step = _to_tuple(Val(D), step)
+    indextable = _build_indextable(variablenames, Rs, unfoldingscheme)
+    return InherentDiscreteGrid{D}(Rs, origin, step, variablenames, base, indextable)
 end
 
-"""
-    grid_min(g::InherentDiscreteGrid)
+function InherentDiscreteGrid(Rs::NTuple{D,Int}; variablenames=ntuple(Symbol, D), kwargs...) where {D}
+    return InherentDiscreteGrid(variablenames, Rs; kwargs...)
+end
 
-Returns the grid point with minimal coordinate values.
-This is equivalent to [`grid_origin`](@ref).
-The return value is scalar for 1D grids, and a `Tuple` otherwise.
-"""
-grid_min(grid::InherentDiscreteGrid) = _convert_to_scalar_if_possible(grid.origin)
+function InherentDiscreteGrid(R::Int, origin; kwargs...)
+    return InherentDiscreteGrid{length(origin)}(R, origin; kwargs...)
+end
 
+# ============================================================================
+# Basic property accessor functions
+# ============================================================================
 
-"""
-    grid_max(g::InherentDiscreteGrid)
+Base.ndims(::InherentDiscreteGrid{D}) where D = D
 
-Returns the grid point with maximal coordinate values.
-The return value is scalar for 1D grids, and a `Tuple` otherwise.
-"""
-grid_max(grid::InherentDiscreteGrid) = _convert_to_scalar_if_possible(
-    grid.origin .+ grid_step(grid) .* (grid.base^grid.R .- 1),
-)
+Base.length(g::InherentDiscreteGrid) = length(g.indextable)
 
-"""
-    grid_step(g::InherentDiscreteGrid)
+grid_Rs(g::InherentDiscreteGrid) = g.Rs
 
-Returns the distance between adjacent grid points in each dimension.
-The return value is scalar for 1D grids, and a `Tuple` otherwise.
-"""
-grid_step(grid::InherentDiscreteGrid{d}) where {d} =
-    _convert_to_scalar_if_possible(grid.step)
+grid_indextable(g::InherentDiscreteGrid) = g.indextable
 
+grid_base(g::InherentDiscreteGrid) = g.base
 
+grid_variablenames(g::InherentDiscreteGrid) = g.variablenames
 
-"""
-    grid_origin(g::InherentDiscreteGrid)
+grid_step(g::InherentDiscreteGrid) = _convert_to_scalar_if_possible(g.step)
 
-Returns the origin of the grid, as passed to the constructor during grid creation.
-The return value is scalar for 1D grids, and a `Tuple` otherwise.
-"""
 grid_origin(g::InherentDiscreteGrid) = _convert_to_scalar_if_possible(g.origin)
 
-
-"""
-Create a grid for inherently discrete data with origin at 1
-"""
-function InherentDiscreteGrid{d}(
-    R::Int;
-    base::Integer = 2,
-    step::Union{NTuple{d,Int},Int} = 1,
-    unfoldingscheme::Symbol = :fused,
-) where {d}
-    InherentDiscreteGrid{d}(
-        R,
-        1;
-        base = base,
-        unfoldingscheme = unfoldingscheme,
-        step = step,
-    )
-end
-
-
-"""
-Create a grid for inherently discrete data with origin at an arbitrary point
-"""
-#function InherentDiscreteGrid{d}(
-#R::Int, origin::Union{NTuple{d,Int},Int};
-#base=2, unfoldingscheme::UnfoldingSchemes.UnfoldingScheme=UnfoldingSchemes.fused,
-#) where {d}
-#InherentDiscreteGrid{d}(
-#R, origin; base=base, unfoldingscheme=unfoldingscheme, step=step
-#)
-#end
-
-
-"""
-Convert a coordinate in the original coordinate system to the corresponding grid index
-"""
-function origcoord_to_grididx(
-    g::InherentDiscreteGrid,
-    coordinate::Union{Int,NTuple{N,Int}},
-) where {N}
-    return _convert_to_scalar_if_possible(
-        div.(coordinate .- grid_min(g), grid_step(g)) .+ 1,
-    )
-end
-
-
-@doc raw"""
-The DiscretizedGrid struct represents a grid for discretized continuous data.
-This is used for data that is originally continuous,
-but has been discretized for computational purposes.
-The grid contains values at specific, equally spaced points, which represent discrete
-approximations of the original continuous data.
-"""
-struct DiscretizedGrid{d} <: Grid{d}
-    R::Int
-    lower_bound::NTuple{d,Float64}
-    upper_bound::NTuple{d,Float64}
-    base::Int
-    unfoldingscheme::Symbol
-    includeendpoint::Bool
-
-    function DiscretizedGrid{d}(
-        R::Int,
-        lower_bound,
-        upper_bound;
-        base::Integer = 2,
-        unfoldingscheme::Symbol = :fused,
-        includeendpoint::Bool = false,
-    ) where {d}
-        _rangecheck_R(R; base = base)
-        unfoldingscheme in (:fused, :interleaved) ||
-            error("Invalid unfolding scheme: $unfoldingscheme")
-        return new(
-            R,
-            _to_tuple(Val(d), lower_bound),
-            _to_tuple(Val(d), upper_bound),
-            base,
-            unfoldingscheme,
-            includeendpoint,
-        )
+function sitedim(g::InherentDiscreteGrid, site::Int)::Int
+    if !(site ∈ eachindex(g.indextable))
+        throw(DomainError(site, lazy"Site index out of bounds [1, $(length(g.indextable))]."))
     end
+    return g.base^length(g.indextable[site])
 end
 
+# ============================================================================
+# Grid coordinate functions
+# ============================================================================
 
-"""
-Create a discretized grid for a 1D space
-"""
-function DiscretizedGrid(
-    R::Int,
-    grid_min::T,
-    grid_max::T;
-    base::Integer = 2,
-    unfoldingscheme::Symbol = :fused,
-    includeendpoint::Bool = false,
-) where {T<:Real}
-    return DiscretizedGrid{1}(
-        R,
-        (grid_min,),
-        (grid_max,);
-        base = base,
-        unfoldingscheme = unfoldingscheme,
-        includeendpoint = includeendpoint,
-    )
-end
+grid_min(g::InherentDiscreteGrid) = _convert_to_scalar_if_possible(g.origin)
 
-
-"""
-Create a discretized grid for a d-dimensional space
-"""
-function DiscretizedGrid(
-    R::Int,
-    grid_min::NTuple{d,T},
-    grid_max::NTuple{d,T};
-    base::Integer = 2,
-    unfoldingscheme::Symbol = :fused,
-    includeendpoint::Bool = false,
-) where {d,T<:Real}
-    return DiscretizedGrid{d}(
-        R,
-        grid_min,
-        grid_max;
-        base = base,
-        unfoldingscheme = unfoldingscheme,
-        includeendpoint = includeendpoint,
-    )
-end
-
-
-
-"""
-    grid_min(g::DiscretizedGrid)
-
-
-Returns the grid point with minimal coordinate values.
-This is equivalent to [`lower_bound`](@ref).
-The return value is scalar for 1D grids, and a `Tuple` otherwise.
-"""
-grid_min(g::DiscretizedGrid) = _convert_to_scalar_if_possible(g.lower_bound)
-
-
-"""
-    grid_max(g::DiscretizedGrid)
-
-Returns the grid point with maximal coordinate values.
- - If `includeendpoint=false` during creation of the grid, this value is dependent on grid resolution.
- - If `includeendpoint=true` during creation of the grid, this function is equivalent to [`upper_bound`](@ref).
-The return value is scalar for 1D grids, and a `Tuple` otherwise.
-"""
-grid_max(g::DiscretizedGrid) =
-    g.includeendpoint ? _convert_to_scalar_if_possible(g.upper_bound) :
-    _convert_to_scalar_if_possible(g.upper_bound .- grid_step(g))
-
-"""
-    grid_step(g::DiscretizedGrid)
-
-Returns the distance between adjacent grid points in each dimension.
-The return value is scalar for 1D grids, and a `Tuple` otherwise.
-"""
-grid_step(g::DiscretizedGrid{d}) where {d} = _convert_to_scalar_if_possible(
-    g.includeendpoint ? (g.upper_bound .- g.lower_bound) ./ (g.base^g.R .- 1) :
-    (g.upper_bound .- g.lower_bound) ./ (g.base^g.R),
+grid_max(g::InherentDiscreteGrid) = _convert_to_scalar_if_possible(
+    grid_origin(g) .+ grid_step(g) .* (g.base .^ g.Rs .- 1),
 )
 
-"""
-    upper_bound(g::DiscretizedGrid)
+# ============================================================================
+# Core conversion functions
+# ============================================================================
 
-Returns the upper bound of the grid coordinates, as passed to the constructor during grid creation.
- - If `includeendpoint=false` during grid creation, this function returns a point that is one grid spacing beyond the last grid point (which can be obtained through [`grid_max`](@ref)).
- - If `includeendpoint=true` during grid creation, this function returns the point with maximal coordinate values. This is equivalent to [`grid_max`](@ref).
-The return value is scalar for 1D grids, and a `Tuple` otherwise.
-"""
-upper_bound(g::DiscretizedGrid) = _convert_to_scalar_if_possible(g.upper_bound)
+function quantics_to_grididx(g::InherentDiscreteGrid{D}, quantics::AbstractVector{Int}) where D
+    # TODO: add switch to turn off input validation
+    if !(length(quantics) == length(g))
+        throw(ArgumentError(lazy"Quantics vector must have length $(length(g.indextable)), got $(length(quantics))."))
+    end
 
-"""
-    lower_bound(g::DiscretizedGrid)
+    for site in eachindex(quantics)
+        if !(1 <= quantics[site] <= sitedim(g, site))
+            throw(DomainError(quantics[site], lazy"Quantics value for site $site out of range 1:$(sitedim(g, site))."))
+        end
+    end
 
-Returns the grid point with minimal coordinate values, as passed to the constructor during grid creation.
-This is equivalent to [`grid_min`](@ref).
-The return value is scalar for 1D grids, and a `Tuple` otherwise.
-"""
-lower_bound(g::DiscretizedGrid) = _convert_to_scalar_if_possible(g.lower_bound)
+    result = if g.base == 2
+        _quantics_to_grididx_base2(g, quantics)
+    else
+        _quantics_to_grididx_general(g, quantics)
+    end
 
-function DiscretizedGrid{d}(R::Int; base = 2, unfoldingscheme::Symbol = :fused) where {d}
-    return DiscretizedGrid{d}(
-        R,
-        ntuple(i -> 0.0, d),
-        ntuple(i -> 1.0, d);
-        base = base,
-        unfoldingscheme = unfoldingscheme,
-    )
+    return _convert_to_scalar_if_possible(result)
 end
 
+function grididx_to_quantics(g::InherentDiscreteGrid{D}, grididx::Int) where D
+    grididx_tuple = _to_tuple(Val(D), grididx)
+    return grididx_to_quantics(g, grididx_tuple)
+end
+function grididx_to_quantics(g::InherentDiscreteGrid{D}, grididx_tuple::NTuple{D,Int}) where D
+    # TODO: add switch to turn off input validation
+    for d in 1:D
+        if !(1 <= grididx_tuple[d] <= g.maxgrididx[d])
+            throw(DomainError(grididx_tuple[d], lazy"Grid index out of bounds [1, $(g.maxgrididx[d])]."))
+        end
+    end
 
-"""
-Convert a coordinate in the original coordinate system to the corresponding grid index
-"""
-function origcoord_to_grididx(g::DiscretizedGrid, coordinate::NTuple{N,Float64}) where {N}
-    all(lower_bound(g) .<= coordinate .<= upper_bound(g)) || error(
-        "Bound Error: $(coordinate), lower_bound=$(lower_bound(g)), upper_bound=$(upper_bound(g))",
-    )
-    clip(x) = max.(1, min.(x, g.base^g.R))
-    return _convert_to_scalar_if_possible(
-        ((coordinate .- grid_min(g)) ./ grid_step(g) .+ 1) .|> round .|> Int,
-    )
+    result = ones(Int, length(g.indextable))
+    if g.base == 2
+        _grididx_to_quantics_base2!(result, g, grididx_tuple)
+    else
+        _grididx_to_quantics_general!(result, g, grididx_tuple)
+    end
+    return result
 end
 
-function origcoord_to_grididx(g::DiscretizedGrid{1}, coordinate::Float64)
-    origcoord_to_grididx(g, (coordinate,))[1]
+function grididx_to_origcoord(g::InherentDiscreteGrid{D}, grididx) where D
+    grididx = _to_tuple(Val(D), grididx)
+    for d in 1:D
+        if !(grididx[d] ∈ 1:g.maxgrididx[d])
+            throw(DomainError(grididx[d], lazy"Grid index out of bounds [1, $(g.maxgrididx[d])]."))
+        end
+    end
+
+    res = grid_origin(g) .+ (grididx .- 1) .* grid_step(g)
+
+    return _convert_to_scalar_if_possible(res)
+end
+
+function origcoord_to_grididx(g::InherentDiscreteGrid{D}, coordinate) where {D}
+    coord_tuple = _to_tuple(Val(D), coordinate)
+    bounds_lower = grid_min(g)
+    bounds_upper = grid_max(g)
+    # TODO: think about the correct bounds to use here
+    for d in 1:D
+        if !(bounds_lower[d] <= coord_tuple[d] <= bounds_upper[d])
+            throw(DomainError(coord_tuple[d], lazy"Coordinate out of bounds [$(bounds_lower[d]), $(bounds_upper[d])]."))
+        end
+    end
+
+    discrete_idx = div.(coord_tuple .- grid_min(g), grid_step(g)) .+ 1
+    discrete_idx = clamp.(discrete_idx, 1, g.base .^ g.Rs)
+
+    return _convert_to_scalar_if_possible(discrete_idx)
+end
+
+function origcoord_to_quantics(g::InherentDiscreteGrid, coordinate)
+    grididx_to_quantics(g, origcoord_to_grididx(g, coordinate))
+end
+
+function quantics_to_origcoord(g::InherentDiscreteGrid, quantics)
+    grididx_to_origcoord(g, quantics_to_grididx(g, quantics))
+end
+
+# ============================================================================
+# Other utility functions
+# ============================================================================
+
+function localdimensions(g::InherentDiscreteGrid)::Vector{Int}
+    return g.base .^ length.(g.indextable)
 end

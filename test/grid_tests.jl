@@ -1,8 +1,6 @@
-
 @testitem "grid.jl" begin
     using Test
     import QuanticsGrids
-
 
     @testset "quanticsfunction" begin
         R = 8
@@ -23,14 +21,14 @@
     @testset "2D grid (large R)" for base in [2]
         R = 62
         d = 2
-        grid = QuanticsGrids.DiscretizedGrid{d}(R, 0.0, 1.0; base = base)
+        grid = QuanticsGrids.DiscretizedGrid{d}(R, 0.0, 1.0; base=base)
         @test QuanticsGrids.grididx_to_quantics(grid, ntuple(i -> base^R, d)) ==
               fill(base^d, R)
     end
 
     @testset "1D grid (too large R)" begin
         R = 64
-        @test_throws ErrorException QuanticsGrids.DiscretizedGrid{1}(R, 0.0, 1.0)
+        @test_throws ArgumentError QuanticsGrids.DiscretizedGrid{1}(R, 0.0, 1.0)
     end
 
     @testset "grid representation conversion" for R in [10]
@@ -83,7 +81,7 @@
         step in [(1, 1, 1), (1, 1, 2)],
         origin in [(1, 1, 1), (1, 1, 2)]
 
-        m = QuanticsGrids.InherentDiscreteGrid{3}(5, origin; unfoldingscheme, step = step)
+        m = QuanticsGrids.InherentDiscreteGrid{3}(5, origin; unfoldingscheme, step=step)
         @test QuanticsGrids.grid_min(m) == origin
         @test QuanticsGrids.grid_step(m) == step
 
@@ -144,12 +142,12 @@
                 a,
                 b;
                 unfoldingscheme,
-                includeendpoint = true,
+                includeendpoint=true,
             )
             @test QuanticsGrids.localdimensions(g) == fill(2, R)
 
             @test QuanticsGrids.lower_bound(g) == 0.0
-            @test QuanticsGrids.upper_bound(g) == 1.0
+            @test QuanticsGrids.upper_bound(g) ≈ 1.0 + dx
             @test QuanticsGrids.grid_min(g) == a
             @test QuanticsGrids.grid_max(g) == b
 
@@ -185,16 +183,15 @@
 
             for (c, ref) in zip(cs, refs)
                 @inferred(QuanticsGrids.origcoord_to_grididx(g, c))
-                @show QuanticsGrids.origcoord_to_grididx(g, c), ref
                 @test all(QuanticsGrids.origcoord_to_grididx(g, c) .== ref)
             end
 
-            @test_throws "Bound Error:" QuanticsGrids.origcoord_to_grididx(g, (0.0, 0.0))
-            @test_throws "Bound Error:" QuanticsGrids.origcoord_to_grididx(g, (0.0, 1.1))
-            @test_throws "Bound Error:" QuanticsGrids.origcoord_to_grididx(g, (1.1, 0.0))
-            @test_throws "Bound Error:" QuanticsGrids.origcoord_to_grididx(g, (3.0, 1.1))
-            @test_throws "Bound Error:" QuanticsGrids.origcoord_to_grididx(g, (1.1, 3.0))
-            @test_throws "Bound Error:" QuanticsGrids.origcoord_to_grididx(g, (3.0, 3.0))
+            @test_throws DomainError QuanticsGrids.origcoord_to_grididx(g, (0.0, 0.0))
+            @test_throws DomainError QuanticsGrids.origcoord_to_grididx(g, (0.0, 1.1))
+            @test_throws DomainError QuanticsGrids.origcoord_to_grididx(g, (1.1, 0.0))
+            @test_throws DomainError QuanticsGrids.origcoord_to_grididx(g, (3.0, 1.1))
+            @test_throws DomainError QuanticsGrids.origcoord_to_grididx(g, (1.1, 3.0))
+            @test_throws DomainError QuanticsGrids.origcoord_to_grididx(g, (3.0, 3.0))
         end
 
         @testset "2D (includeendpoint)" for unfoldingscheme in [:interleaved, :fused]
@@ -208,10 +205,9 @@
                 a,
                 b;
                 unfoldingscheme,
-                includeendpoint = true,
+                includeendpoint=true,
             )
-            @test g.includeendpoint
-            @test QuanticsGrids.grid_step(g) == dx
+            @test all(QuanticsGrids.grid_step(g) .≈ dx)
 
             if unfoldingscheme === :interleaved
                 @test QuanticsGrids.localdimensions(g) == fill(2, d * R)
@@ -255,7 +251,7 @@
         @test g3 isa QuanticsGrids.InherentDiscreteGrid{1}
         @test QuanticsGrids.grid_origin(g3) == 1
 
-        g4 = QuanticsGrids.InherentDiscreteGrid(4, (1, 2, 3); step = (1, 2, 1))
+        g4 = QuanticsGrids.InherentDiscreteGrid(4, (1, 2, 3); step=(1, 2, 1))
         @test g4 isa QuanticsGrids.InherentDiscreteGrid{3}
         @test QuanticsGrids.grid_origin(g4) == (1, 2, 3)
         @test QuanticsGrids.grid_step(g4) == (1, 2, 1)
