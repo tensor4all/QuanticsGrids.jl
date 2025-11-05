@@ -106,16 +106,25 @@ function rangecheck_R(R::Int; base::Int=2)::Bool
 end
 
 function _build_indextable(variablenames::NTuple{D,Symbol}, Rs::NTuple{D,Int}, unfoldingscheme::Symbol) where D
-    if !(unfoldingscheme in (:interleaved, :fused))
-        throw(ArgumentError(lazy"Got unfoldingscheme = $unfoldingscheme. Supported are :interleaved and :fused."))
+    if !(unfoldingscheme in (:interleaved, :fused, :grouped))
+        throw(ArgumentError(lazy"Got unfoldingscheme = $unfoldingscheme. Supported are :interleaved, :fused and :grouped."))
     end
     indextable = Vector{Tuple{Symbol,Int}}[]
 
-    for bitnumber in 1:maximum(Rs; init=0)
-        if unfoldingscheme === :interleaved
-            _add_interleaved_indices!(indextable, variablenames, Rs, bitnumber)
-        elseif unfoldingscheme === :fused
-            _add_fused_indices!(indextable, variablenames, Rs, bitnumber)
+    if unfoldingscheme === :grouped
+        for d in 1:D
+            for bitnumber in 1:Rs[d]
+                qindex = (variablenames[d], bitnumber)
+                push!(indextable, [qindex])
+            end
+        end
+    else
+        for bitnumber in 1:maximum(Rs; init=0)
+            if unfoldingscheme === :interleaved
+                _add_interleaved_indices!(indextable, variablenames, Rs, bitnumber)
+            elseif unfoldingscheme === :fused
+                _add_fused_indices!(indextable, variablenames, Rs, bitnumber)
+            end
         end
     end
 
@@ -247,9 +256,9 @@ function InherentDiscreteGrid(
     step=default_step(Val(D)),
     base=2
 ) where D
-    Rs = Tuple(map(variablenames) do variablename
+    Rs = map(variablenames) do variablename
         count(index -> first(index) == variablename, Iterators.flatten(indextable))
-    end)
+    end
 
     return InherentDiscreteGrid{D}(Rs, origin, step, variablenames, base, indextable)
 end
