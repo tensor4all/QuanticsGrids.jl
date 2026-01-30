@@ -200,9 +200,9 @@ function DiscretizedGrid(
     base::Int=2,
     includeendpoint=false
 ) where D
-    Rs = Tuple(map(variablenames) do variablename
+    Rs = map(variablenames) do variablename
         count(index -> first(index) == variablename, Iterators.flatten(indextable))
-    end)
+    end
 
     return DiscretizedGrid{D}(Rs, lower_bound, upper_bound, variablenames, base, indextable, includeendpoint)
 end

@@ -521,3 +521,10 @@ end
     @test QuanticsGrids.lower_bound(grid) == -2.0
     @test QuanticsGrids.upper_bound(grid) == 3.0
 end
+
+@testitem "grouped unfoldingscheme" begin
+    Rs = (3, 4, 5)
+    grid = DiscretizedGrid{3}(Rs; unfoldingscheme=:grouped)
+    indextable = reduce(vcat, ([[(Symbol(d), r)] for r in 1:Rs[d]] for d in eachindex(Rs)))
+    @test QuanticsGrids.grid_indextable(grid) == indextable
+end

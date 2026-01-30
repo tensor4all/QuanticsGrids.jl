@@ -8,6 +8,6 @@ end
     using JET
 
     if VERSION >= v"1.10"
-        JET.test_package(QuanticsGrids; target_defined_modules=true)
+        JET.test_package(QuanticsGrids; target_modules=(QuanticsGrids,))
     end
 end

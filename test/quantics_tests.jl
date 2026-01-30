@@ -27,6 +27,26 @@ end
     @test grididx_to_quantics(grid, (1, 30)) == [1, 2, 1, 2, 1, 2, 1, 2]
 end
 
+
+@testitem "grouped unfoldingscheme quantics conversions" begin
+    Rs = (2, 1)
+    grid = DiscretizedGrid(Rs; unfoldingscheme=:grouped)
+    @test QuanticsGrids.localdimensions(grid) == fill(2, sum(Rs))
+
+    grididx = (3, 2)
+    expected_quantics = [2, 1, 2]
+    @test grididx_to_quantics(grid, grididx) == expected_quantics
+    @test quantics_to_grididx(grid, expected_quantics) == grididx
+
+    grid_base3 = DiscretizedGrid(Rs; base=3, unfoldingscheme=:grouped)
+    @test QuanticsGrids.localdimensions(grid_base3) == fill(3, sum(Rs))
+
+    grididx_base3 = (5, 3)
+    expected_quantics_base3 = [2, 2, 3]
+    @test grididx_to_quantics(grid_base3, grididx_base3) == expected_quantics_base3
+    @test quantics_to_grididx(grid_base3, expected_quantics_base3) == grididx_base3
+end
+
 @testitem "quantics_to_grididx ∘ grididx_to_quantics == identity" begin
     grid = DiscretizedGrid((5, 3, 17); base=13)
     for _ in 1:100
