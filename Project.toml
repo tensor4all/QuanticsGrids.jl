@@ -1,7 +1,7 @@
 name = "QuanticsGrids"
 uuid = "634c7f73-3e90-4749-a1bd-001b8efc642d"
 authors = ["Ritter.Marc <Ritter.Marc@physik.uni-muenchen.de>, Hiroshi Shinaoka <h.shinaoka@gmail.com>, Samuel Badr <samuel.badr@gmail.com> and contributors"]
-version = "0.7.0"
+version = "0.7.1"
 
 [deps]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
