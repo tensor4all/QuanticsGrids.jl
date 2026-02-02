@@ -398,6 +398,34 @@ end
     @test origcoord_to_quantics(grid, 0.0) == [1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
 end
 
+@testitem "integration test mixed bases discretized grid" begin
+    Rs = (2, 1, 3)
+    bases = (2, 3, 5)
+    lower = (0.0, -1.0, 10.0)
+    upper = (4.0, 2.0, 135.0)
+    grid = DiscretizedGrid(Rs; base=bases, lower_bound=lower, upper_bound=upper, unfoldingscheme=:fused)
+
+    @test QuanticsGrids.grid_step(grid) == (1.0, 1.0, 1.0)
+    @test QuanticsGrids.grid_max(grid) == (3.0, 1.0, 134.0)
+
+    origcoord = (2.0, 0.0, 12.0)
+    @test QuanticsGrids.origcoord_to_grididx(grid, origcoord) == (3, 2, 3)
+    @test QuanticsGrids.grididx_to_origcoord(grid, (3, 2, 3)) == origcoord
+
+    quantics = QuanticsGrids.origcoord_to_quantics(grid, origcoord)
+    @test QuanticsGrids.quantics_to_origcoord(grid, quantics) == origcoord
+end
+
+@testitem "integration test mixed bases includeendpoint" begin
+    Rs = (1, 1)
+    bases = (2, 6)
+    grid = DiscretizedGrid(Rs; base=bases, includeendpoint=(true, true), unfoldingscheme=:grouped)
+
+    ub = QuanticsGrids.upper_bound(grid)
+    @test ub[1] == 2.0
+    @test ub[2] ≈ 1.2
+end
+
 @testitem "Additional Constructors" begin
     g = DiscretizedGrid{2}((3, 4), (-2, 3), (4, 5); unfoldingscheme=:interleaved)
     g = DiscretizedGrid((3, 4), (-2, 3), (4, 5); unfoldingscheme=:interleaved)

@@ -47,7 +47,8 @@ and represents a 2^3 x 2^2 discretization of the unit square in the 2D plane (th
 
 If something other than a unit square is desired, `lower_bound` and `upper_bound`
 can be specified. Also, bases different than the default base 2 can be used,
-e.g. `base=3` for a ternary grid.
+e.g. `base=3` for a ternary grid, or `base=(2, 6)` for per-variable bases. When
+passing a tuple, the base order matches `variablenames`.
 
 In addition to the plain methods, there is a convenience layer for conversion
 from the original coordinates
@@ -94,6 +95,7 @@ struct DiscretizedGrid{D} <: Grid{D}
     ) where {D}
         lower_bound = _to_tuple(Val(D), lower_bound)
         upper_bound = _to_tuple(Val(D), upper_bound)
+        base = _to_tuple(Val(D), base)
         for d in 1:D
             if !(lower_bound[d] < upper_bound[d])
                 throw(ArgumentError(lazy"Got (lower_bound[$d], upper_bound[$d]) = $((lower_bound[d], upper_bound[d])). Each lower bound needs to be strictly less than the corresponding upper bound."))
@@ -115,6 +117,7 @@ end
 # ============================================================================
 
 function _adjust_upper_bounds(upper_bound, lower_bound, includeendpoint, base, Rs, ::Val{D}) where D
+    base = _to_tuple(Val(D), base)
     includeendpoint = _to_tuple(Val(D), includeendpoint)
     for d in 1:D
         if iszero(Rs[d]) && includeendpoint[d]
@@ -124,7 +127,8 @@ function _adjust_upper_bounds(upper_bound, lower_bound, includeendpoint, base, R
 
     return ntuple(D) do d
         if includeendpoint[d]
-            upper_bound[d] + (upper_bound[d] - lower_bound[d]) / (base^Rs[d] - 1)
+            base_d = base[d]
+            upper_bound[d] + (upper_bound[d] - lower_bound[d]) / (base_d^Rs[d] - 1)
         else
             upper_bound[d]
         end
@@ -161,7 +165,7 @@ function DiscretizedGrid(
     Rs::NTuple{D,Int};
     lower_bound=default_lower_bound(Val(D)),
     upper_bound=default_upper_bound(Val(D)),
-    base::Int=2,
+    base=2,
     unfoldingscheme::Symbol=:fused,
     includeendpoint=false
 ) where {D}
@@ -197,7 +201,7 @@ function DiscretizedGrid(
     indextable::Vector{Vector{Tuple{Symbol,Int}}};
     lower_bound=default_lower_bound(Val(D)),
     upper_bound=default_upper_bound(Val(D)),
-    base::Int=2,
+    base=2,
     includeendpoint=false
 ) where D
     Rs = map(variablenames) do variablename
@@ -225,6 +229,8 @@ grid_indextable(g::DiscretizedGrid{D}) where D = grid_indextable(g.discretegrid)
 
 grid_base(g::DiscretizedGrid{D}) where D = grid_base(g.discretegrid)
 
+grid_bases(g::DiscretizedGrid{D}) where D = grid_bases(g.discretegrid)
+
 grid_variablenames(g::DiscretizedGrid{D}) where D = grid_variablenames(g.discretegrid)
 
 upper_bound(g::DiscretizedGrid) = _convert_to_scalar_if_possible(g.upper_bound)
@@ -237,7 +243,7 @@ function sitedim(g::DiscretizedGrid, site::Int)::Int
     if !(site ∈ eachindex(grid_indextable(g)))
         throw(DomainError(site, lazy"Site index out of bounds [1, $(length(grid_indextable(g)))]"))
     end
-    return grid_base(g)^length(grid_indextable(g)[site])
+    return sitedim(g.discretegrid, site)
 end
 
 # ============================================================================
@@ -249,7 +255,7 @@ grid_min(g::DiscretizedGrid) = _convert_to_scalar_if_possible(g.lower_bound)
 grid_max(g::DiscretizedGrid) = _convert_to_scalar_if_possible(g.upper_bound .- grid_step(g))
 
 grid_step(g::DiscretizedGrid) = _convert_to_scalar_if_possible(
-    (upper_bound(g) .- lower_bound(g)) ./ (grid_base(g) .^ grid_Rs(g)),
+    (upper_bound(g) .- lower_bound(g)) ./ (grid_bases(g) .^ grid_Rs(g)),
 )
 
 function grid_origcoords(g::DiscretizedGrid, d::Int)
@@ -258,7 +264,8 @@ function grid_origcoords(g::DiscretizedGrid, d::Int)
     end
     start = grid_min(g)[d]
     stop = grid_max(g)[d]
-    length = grid_base(g)^grid_Rs(g)[d]
+    base_d = grid_bases(g)[d]
+    length = base_d^grid_Rs(g)[d]
     return range(start, stop, length)
 end
 
@@ -283,13 +290,15 @@ end
 function grididx_to_origcoord(g::DiscretizedGrid{D}, index) where {D}
     index_tuple = _to_tuple(Val(D), index)
     for d in 1:D
-        if !(1 <= index_tuple[d] <= grid_base(g)^grid_Rs(g)[d])
-            throw(DomainError(index_tuple[d], lazy"Grid index out of bounds [1, $(grid_base(g) ^ grid_Rs(g)[d])]."))
+        base_d = grid_bases(g)[d]
+        if !(1 <= index_tuple[d] <= base_d^grid_Rs(g)[d])
+            throw(DomainError(index_tuple[d], lazy"Grid index out of bounds [1, $(base_d ^ grid_Rs(g)[d])]."))
         end
     end
 
     res = ntuple(D) do d
-        step_d = (g.upper_bound[d] - g.lower_bound[d]) / (grid_base(g)^grid_Rs(g)[d])
+        base_d = grid_bases(g)[d]
+        step_d = (g.upper_bound[d] - g.lower_bound[d]) / (base_d^grid_Rs(g)[d])
         g.lower_bound[d] + (index_tuple[d] - 1) * step_d
     end
 
@@ -315,7 +324,8 @@ function origcoord_to_grididx(g::DiscretizedGrid{D}, coordinate) where {D}
         continuous_idx = (target - bounds_lower[d]) / step_d + 1
 
         discrete_idx = round(Int, continuous_idx)
-        clamp(discrete_idx, 1, grid_base(g)^grid_Rs(g)[d])
+        base_d = grid_bases(g)[d]
+        clamp(discrete_idx, 1, base_d^grid_Rs(g)[d])
     end
 
     return _convert_to_scalar_if_possible(indices)
@@ -361,7 +371,7 @@ end
 # ============================================================================
 
 function localdimensions(g::DiscretizedGrid)::Vector{Int}
-    return grid_base(g) .^ length.(grid_indextable(g))
+    return copy(g.discretegrid.sitedims)
 end
 
 function quanticsfunction(::Type{T}, g::DiscretizedGrid, f::F)::Function where {T,F<:Function}
@@ -384,11 +394,12 @@ function Base.show(io::IO, ::MIME"text/plain", g::DiscretizedGrid{D}) where D
     print(io, "DiscretizedGrid{$D}")
 
     # Grid resolution and total points
-    total_points = prod(big(grid_base(g)) .^ grid_Rs(g))
+    points_per_dim = big.(grid_bases(g)) .^ grid_Rs(g)
+    total_points = prod(points_per_dim)
     if D <= 1
         print(io, " with $total_points grid point" * (isone(total_points) ? "" : "s"))
     else
-        print(io, " with $(join(big(grid_base(g)) .^ grid_Rs(g), " × ")) = $total_points grid points")
+        print(io, " with $(join(points_per_dim, " × ")) = $total_points grid points")
     end
 
     # Variable names (if meaningful)
@@ -467,10 +478,10 @@ function Base.show(io::IO, ::MIME"text/plain", g::DiscretizedGrid{D}) where D
 end
 
 function Base.show(io::IO, g::DiscretizedGrid{D}) where D
-    total_points = prod(grid_base(g) .^ grid_Rs(g))
+    points_per_dim = grid_bases(g) .^ grid_Rs(g)
     if D == 1
-        print(io, "DiscretizedGrid{$D}($(grid_base(g)^grid_Rs(g)[1]) points)")
+        print(io, "DiscretizedGrid{$D}($(points_per_dim[1]) points)")
     else
-        print(io, "DiscretizedGrid{$D}($(join(grid_base(g) .^ grid_Rs(g), "×")) points)")
+        print(io, "DiscretizedGrid{$D}($(join(points_per_dim, "×")) points)")
     end
 end

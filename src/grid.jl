@@ -3,33 +3,36 @@ struct InherentDiscreteGrid{D} <: Grid{D}
     origin::NTuple{D,Int}
     step::NTuple{D,Int}
     variablenames::NTuple{D,Symbol}
-    base::Int
+    base::NTuple{D,Int}
     indextable::Vector{Vector{Tuple{Symbol,Int}}}
 
     # Lookup table: lookup_table[variablename_index][bitnumber] -> (site_index, position_in_site)
     lookup_table::NTuple{D,Vector{Tuple{Int,Int}}}
     maxgrididx::NTuple{D,Int}
+    site_radices::Vector{Vector{Int}}
+    site_placevalues::Vector{Vector{Int}}
+    sitedims::Vector{Int}
 
     function InherentDiscreteGrid{D}(
         Rs::NTuple{D,Int},
         origin::NTuple{D,Int},
         step::NTuple{D,Int},
         variablenames::NTuple{D,Symbol},
-        base::Int,
+        base::NTuple{D,Int},
         indextable::Vector{Vector{Tuple{Symbol,Int}}}
     ) where {D}
         if !(D isa Int)
             throw(ArgumentError(lazy"Got dimension $D, which is not an Int."))
         end
-        if base <= 1
-            throw(ArgumentError(lazy"Got base = $base. base must be at least 2."))
-        end
         for d in 1:D
+            if base[d] <= 1
+                throw(ArgumentError(lazy"Got base[$d] = $(base[d]). base must be at least 2."))
+            end
             if !(step[d] >= 1)
                 throw(ArgumentError(lazy"Got step[$d] = $(step[d]). step must be at least 1."))
             end
-            if !rangecheck_R(Rs[d]; base)
-                throw(ArgumentError(lazy"Got Rs[$d] = $(Rs[d]) with base = $base. For all gridindices from 1 to base^R to fit into an Int, we must have base ^ R <= typemax(Int)"))
+            if !rangecheck_R(Rs[d]; base=base[d])
+                throw(ArgumentError(lazy"Got Rs[$d] = $(Rs[d]) with base = $(base[d]). For all gridindices from 1 to base^R to fit into an Int, we must have base ^ R <= typemax(Int)"))
             end
         end
         if !allunique(variablenames)
@@ -37,9 +40,12 @@ struct InherentDiscreteGrid{D} <: Grid{D}
         end
 
         lookup_table = _build_lookup_table(Rs, indextable, variablenames)
-        maxgrididx = map(R -> base^R, Rs)
+        maxgrididx = map((b, R) -> b^R, base, Rs)
+        site_radices = _build_site_radices(indextable, variablenames, base)
+        site_placevalues = _build_site_placevalues(site_radices)
+        sitedims = _build_site_dims(site_radices)
 
-        return new{D}(Rs, origin, step, variablenames, base, indextable, lookup_table, maxgrididx)
+        return new{D}(Rs, origin, step, variablenames, base, indextable, lookup_table, maxgrididx, site_radices, site_placevalues, sitedims)
     end
 end
 
@@ -52,6 +58,15 @@ _convert_to_scalar_if_possible(x::NTuple{1,T}) where {T} = first(x)
 
 _to_tuple(::Val{d}, x::NTuple{d}) where {d} = x
 _to_tuple(::Val{d}, x) where {d} = ntuple(i -> x, d)
+
+_all_base_two(base::NTuple{D,Int}) where {D} = all(==(2), base)
+
+function _base_as_scalar_if_uniform(base::NTuple{D,Int}) where {D}
+    if D == 0
+        return base
+    end
+    return allequal(base) ? first(base) : base
+end
 
 default_step(::Val{D}) where D = ntuple(Returns(1), D)
 
@@ -92,6 +107,38 @@ function _build_lookup_table(Rs::NTuple{D,Int}, indextable::Vector{Vector{Tuple{
     end
 
     return lookup_table
+end
+
+function _build_site_radices(indextable::Vector{Vector{Tuple{Symbol,Int}}}, variablenames::NTuple{D,Symbol}, base::NTuple{D,Int}) where {D}
+    var_index = Dict(zip(variablenames, 1:D))
+    site_radices = Vector{Vector{Int}}(undef, length(indextable))
+    for (i, site) in pairs(indextable)
+        radices = Vector{Int}(undef, length(site))
+        for (j, (variablename, _)) in pairs(site)
+            radices[j] = base[var_index[variablename]]
+        end
+        site_radices[i] = radices
+    end
+    return site_radices
+end
+
+function _build_site_placevalues(site_radices::Vector{Vector{Int}})
+    return map(site_radices) do radices
+        len = length(radices)
+        placevalues = Vector{Int}(undef, len)
+        mult = 1
+        for pos in len:-1:1
+            placevalues[pos] = mult
+            mult *= radices[pos]
+        end
+        placevalues
+    end
+end
+
+function _build_site_dims(site_radices::Vector{Vector{Int}})
+    return map(site_radices) do radices
+        prod(radices; init=1)
+    end
 end
 
 function rangecheck_R(R::Int; base::Int=2)::Bool
@@ -154,8 +201,6 @@ function _add_fused_indices!(indextable, variablenames::NTuple{D,Symbol}, Rs::NT
 end
 
 function _quantics_to_grididx_general(g::InherentDiscreteGrid{D}, quantics) where D
-    base = g.base
-
     return ntuple(D) do d
         grididx = 1
         R_d = g.Rs[d]
@@ -163,15 +208,12 @@ function _quantics_to_grididx_general(g::InherentDiscreteGrid{D}, quantics) wher
         for bitnumber in 1:R_d
             site_idx, pos_in_site = g.lookup_table[d][bitnumber]
             quantics_val = quantics[site_idx]
-            site_len = length(g.indextable[site_idx])
+            zero_based = quantics_val - 1
+            placevalue = g.site_placevalues[site_idx][pos_in_site]
+            base_pos = g.site_radices[site_idx][pos_in_site]
+            digit = (zero_based ÷ placevalue) % base_pos
 
-            temp = quantics_val - 1
-            for _ in 1:(site_len-pos_in_site)
-                temp = div(temp, base)
-            end
-            digit = temp % base
-
-            grididx += digit * base^(R_d - bitnumber)
+            grididx += digit * g.base[d]^(R_d - bitnumber)
         end
         grididx
     end
@@ -193,21 +235,18 @@ function _quantics_to_grididx_base2(g::InherentDiscreteGrid{D}, quantics) where 
 end
 
 function _grididx_to_quantics_general!(result::Vector{Int}, g::InherentDiscreteGrid{D}, grididx::NTuple{D,Int}) where D
-    base = g.base
-
     @inbounds for d in 1:D
         zero_based_idx = grididx[d] - 1
         R_d = g.Rs[d]
 
         for bitnumber in 1:R_d
             site_idx, pos_in_site = g.lookup_table[d][bitnumber]
-            site_length = length(g.indextable[site_idx])
-
+            base_d = g.base[d]
             bit_position = R_d - bitnumber
-            digit = (zero_based_idx ÷ (base^bit_position)) % base
+            digit = (zero_based_idx ÷ (base_d^bit_position)) % base_d
 
-            power = site_length - pos_in_site
-            result[site_idx] += digit * (base^power)
+            placevalue = g.site_placevalues[site_idx][pos_in_site]
+            result[site_idx] += digit * placevalue
         end
     end
 end
@@ -244,6 +283,7 @@ function InherentDiscreteGrid{D}(
     Rs = _to_tuple(Val(D), Rs)
     origin = _to_tuple(Val(D), origin)
     step = _to_tuple(Val(D), step)
+    base = _to_tuple(Val(D), base)
     variablenames = ntuple(Symbol, D)
     indextable = _build_indextable(variablenames, Rs, unfoldingscheme)
     InherentDiscreteGrid{D}(Rs, origin, step, variablenames, base, indextable)
@@ -256,6 +296,7 @@ function InherentDiscreteGrid(
     step=default_step(Val(D)),
     base=2
 ) where D
+    base = _to_tuple(Val(D), base)
     Rs = map(variablenames) do variablename
         count(index -> first(index) == variablename, Iterators.flatten(indextable))
     end
@@ -273,6 +314,7 @@ function InherentDiscreteGrid(
 ) where {D}
     origin = _to_tuple(Val(D), origin)
     step = _to_tuple(Val(D), step)
+    base = _to_tuple(Val(D), base)
     indextable = _build_indextable(variablenames, Rs, unfoldingscheme)
     return InherentDiscreteGrid{D}(Rs, origin, step, variablenames, base, indextable)
 end
@@ -297,7 +339,9 @@ grid_Rs(g::InherentDiscreteGrid) = g.Rs
 
 grid_indextable(g::InherentDiscreteGrid) = g.indextable
 
-grid_base(g::InherentDiscreteGrid) = g.base
+grid_bases(g::InherentDiscreteGrid) = g.base
+
+grid_base(g::InherentDiscreteGrid) = _base_as_scalar_if_uniform(g.base)
 
 grid_variablenames(g::InherentDiscreteGrid) = g.variablenames
 
@@ -309,7 +353,7 @@ function sitedim(g::InherentDiscreteGrid, site::Int)::Int
     if !(site ∈ eachindex(g.indextable))
         throw(DomainError(site, lazy"Site index out of bounds [1, $(length(g.indextable))]."))
     end
-    return g.base^length(g.indextable[site])
+    return g.sitedims[site]
 end
 
 # ============================================================================
@@ -338,7 +382,7 @@ function quantics_to_grididx(g::InherentDiscreteGrid{D}, quantics::AbstractVecto
         end
     end
 
-    result = if g.base == 2
+    result = if _all_base_two(g.base)
         _quantics_to_grididx_base2(g, quantics)
     else
         _quantics_to_grididx_general(g, quantics)
@@ -360,7 +404,7 @@ function grididx_to_quantics(g::InherentDiscreteGrid{D}, grididx_tuple::NTuple{D
     end
 
     result = ones(Int, length(g.indextable))
-    if g.base == 2
+    if _all_base_two(g.base)
         _grididx_to_quantics_base2!(result, g, grididx_tuple)
     else
         _grididx_to_quantics_general!(result, g, grididx_tuple)
@@ -411,5 +455,5 @@ end
 # ============================================================================
 
 function localdimensions(g::InherentDiscreteGrid)::Vector{Int}
-    return g.base .^ length.(g.indextable)
+    return copy(g.sitedims)
 end

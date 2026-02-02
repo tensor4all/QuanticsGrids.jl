@@ -33,7 +33,7 @@ end
     # Test basic 1D constructor
     R = 4
     grid_1d = InherentDiscreteGrid{1}(R, 1; base=2, step=1, unfoldingscheme=:fused)
-    @test grid_1d.base == 2
+    @test QuanticsGrids.grid_base(grid_1d) == 2
     @test grid_1d.origin == (1,)
     @test grid_1d.step == (1,)
 
@@ -41,13 +41,13 @@ end
     origin_3d = (5, 10, 15)
     step_3d = (2, 3, 1)
     grid_3d = InherentDiscreteGrid{3}(R, origin_3d; base=3, step=step_3d, unfoldingscheme=:interleaved)
-    @test grid_3d.base == 3
+    @test QuanticsGrids.grid_base(grid_3d) == 3
     @test grid_3d.origin == origin_3d
     @test grid_3d.step == step_3d
 
     # Test default parameters
     grid_default = InherentDiscreteGrid{2}(R, (0, 0))
-    @test grid_default.base == 2
+    @test QuanticsGrids.grid_base(grid_default) == 2
     @test grid_default.step == (1, 1)
 end
 
@@ -75,7 +75,7 @@ end
     # Test basic properties
     @test ndims(grid) == 2
     @test length(grid) == R  # Number of quantics sites for fused
-    @test grid.base == base
+    @test QuanticsGrids.grid_base(grid) == base
 
     # Test grid boundaries
     @test QuanticsGrids.grid_min(grid) == origin
@@ -443,7 +443,7 @@ end
     @test grid.Rs == (3, 2)  # x has 3 quantics, y has 2 quantics
     @test grid.origin == origin
     @test grid.step == step
-    @test grid.base == base
+    @test QuanticsGrids.grid_base(grid) == base
     @test length(grid) == 4  # 4 sites in tensor train
 
     # Test local dimensions: [2^1, 2^1, 2^1, 2^2] = [2, 2, 2, 4]
@@ -482,7 +482,7 @@ end
     @test grid.Rs == (3, 3, 3)  # Each variable has 3 quantics
     @test grid.origin == origin
     @test grid.step == step
-    @test grid.base == base
+    @test QuanticsGrids.grid_base(grid) == base
     @test length(grid) == 5  # 5 sites in tensor train
 
     # Test local dimensions: [3^2, 3^1, 3^3, 3^1, 3^2] = [9, 3, 27, 3, 9]
@@ -634,7 +634,7 @@ end
 
     @test grid.variablenames == variablenames
     @test grid.Rs == (3, 2, 3)  # u has 3, v has 2, w has 3 quantics
-    @test grid.base == 5
+    @test QuanticsGrids.grid_base(grid) == 5
     @test length(grid) == 4
 
     # Test local dimensions: [5^2, 5^2, 5^1, 5^3] = [25, 25, 5, 125]
@@ -764,7 +764,7 @@ end
     grid1 = InherentDiscreteGrid(variablenames, Rs; origin=origin, step=step)
     @test grid1.variablenames == variablenames
     @test grid1.Rs == Rs
-    @test grid1.base == 2  # default base
+    @test QuanticsGrids.grid_base(grid1) == 2  # default base
     @test grid1.origin == origin
     @test grid1.step == step
     @test ndims(grid1) == 3
@@ -781,7 +781,7 @@ end
 
     @test grid2.variablenames == variablenames
     @test grid2.Rs == Rs
-    @test grid2.base == base
+    @test QuanticsGrids.grid_base(grid2) == base
     @test grid2.origin == origin
     @test grid2.step == step
 
@@ -808,7 +808,7 @@ end
     @test grid.Rs == Rs
     @test grid.origin == origin
     @test grid.step == step
-    @test grid.base == base
+    @test QuanticsGrids.grid_base(grid) == base
     @test ndims(grid) == 3
 
     # Should auto-generate variable names as symbols
@@ -833,7 +833,7 @@ end
     @test grid.Rs == (R,)
     @test grid.origin == (origin,)
     @test grid.step == (step,)
-    @test grid.base == base
+    @test QuanticsGrids.grid_base(grid) == base
     @test ndims(grid) == 1
 
     # Should auto-generate 1D variable name
@@ -864,7 +864,7 @@ end
     @test grid.Rs == ntuple(_ -> R, D)  # All dimensions have same R
     @test grid.origin == origin
     @test grid.step == step
-    @test grid.base == base
+    @test QuanticsGrids.grid_base(grid) == base
 
     # Should auto-generate variable names
     expected_names = ntuple(Symbol, D)
@@ -883,7 +883,7 @@ end
     # Test with minimal parameters (all defaults)
     grid_minimal = InherentDiscreteGrid(Rs)
     @test grid_minimal.Rs == Rs
-    @test grid_minimal.base == 2  # default
+    @test QuanticsGrids.grid_base(grid_minimal) == 2  # default
     @test grid_minimal.origin == (1, 1)  # default origin should be (1, 1, ...)
     @test grid_minimal.step == (1, 1)    # default step should be (1, 1, ...)
 
@@ -892,7 +892,7 @@ end
     grid_partial = InherentDiscreteGrid(Rs; origin=custom_origin)
     @test grid_partial.origin == custom_origin
     @test grid_partial.step == (1, 1)  # should still be default
-    @test grid_partial.base == 2       # should still be default
+    @test QuanticsGrids.grid_base(grid_partial) == 2       # should still be default
 
     # Test step can be specified as single value or tuple
     grid_step_single = InherentDiscreteGrid(Rs; step=3)
@@ -970,7 +970,7 @@ end
     @test ndims(grid_pattern3) == 1
     @test grid_pattern3.Rs == (R_1d,)
     @test grid_pattern3.origin == (origin_1d,)
-    @test grid_pattern3.base == 4
+    @test QuanticsGrids.grid_base(grid_pattern3) == 4
 
     # Test that all patterns produce working grids
     for grid in [grid_pattern1, grid_pattern2, grid_pattern3]

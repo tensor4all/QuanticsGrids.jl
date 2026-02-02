@@ -47,6 +47,55 @@ end
     @test quantics_to_grididx(grid_base3, expected_quantics_base3) == grididx_base3
 end
 
+@testitem "mixed bases" begin
+    Rs = (1, 1)
+    bases = (2, 6)
+    grid = DiscretizedGrid(Rs; base=bases, unfoldingscheme=:fused)
+
+    @test QuanticsGrids.grid_base(grid) == bases
+    @test QuanticsGrids.localdimensions(grid) == [prod(bases)]
+
+    @test grididx_to_quantics(grid, (2, 6)) == [12]
+    @test quantics_to_grididx(grid, [12]) == (2, 6)
+    @test grididx_to_quantics(grid, (1, 2)) == [3]
+    @test quantics_to_grididx(grid, [3]) == (1, 2)
+end
+
+@testitem "mixed bases interleaved" begin
+    Rs = (2, 1)
+    bases = (2, 6)
+    grid = DiscretizedGrid(Rs; base=bases, unfoldingscheme=:interleaved)
+
+    @test QuanticsGrids.localdimensions(grid) == [2, 6, 2]
+
+    @test grididx_to_quantics(grid, (2, 6)) == [1, 6, 2]
+    @test quantics_to_grididx(grid, [1, 6, 2]) == (2, 6)
+end
+
+@testitem "mixed bases grouped" begin
+    Rs = (2, 1)
+    bases = (2, 6)
+    grid = DiscretizedGrid(Rs; base=bases, unfoldingscheme=:grouped)
+
+    @test QuanticsGrids.localdimensions(grid) == [2, 2, 6]
+
+    @test grididx_to_quantics(grid, (2, 6)) == [1, 2, 6]
+    @test quantics_to_grididx(grid, [1, 2, 6]) == (2, 6)
+end
+
+@testitem "mixed bases fused roundtrip" begin
+    Rs = (3, 2, 1)
+    bases = (2, 3, 5)
+    grid = DiscretizedGrid(Rs; base=bases, unfoldingscheme=:fused)
+
+    @test QuanticsGrids.localdimensions(grid) == [30, 6, 2]
+
+    for _ in 1:50
+        quantics = [rand(1:d) for d in QuanticsGrids.localdimensions(grid)]
+        @test grididx_to_quantics(grid, quantics_to_grididx(grid, quantics)) == quantics
+    end
+end
+
 @testitem "quantics_to_grididx ∘ grididx_to_quantics == identity" begin
     grid = DiscretizedGrid((5, 3, 17); base=13)
     for _ in 1:100
