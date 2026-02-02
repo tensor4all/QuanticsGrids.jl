@@ -47,6 +47,11 @@ end
     @test g.discretegrid.lookup_table == g´.discretegrid.lookup_table == g´´.discretegrid.lookup_table
 end
 
+@testitem "DiscretizedGrid dimension mismatch for bounds" begin
+    @test_throws ArgumentError DiscretizedGrid{2}(3, (0.0,), (1.0, 2.0))
+    @test_throws ArgumentError DiscretizedGrid{2}(3, (0.0, 1.0), (1.0,))
+end
+
 @testitem "DiscretizedGrid 0-dimensional show method" begin
     g = DiscretizedGrid(())
     @test try

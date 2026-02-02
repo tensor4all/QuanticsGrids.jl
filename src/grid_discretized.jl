@@ -118,6 +118,15 @@ end
 # Helper/utility functions
 # ============================================================================
 
+function _check_bounds_dim(::Val{D}, lower_bound, upper_bound) where {D}
+    if lower_bound isa NTuple && length(lower_bound) != D
+        throw(ArgumentError(lazy"Got lower_bound with length $(length(lower_bound)); expected $D for DiscretizedGrid{$D}."))
+    end
+    if upper_bound isa NTuple && length(upper_bound) != D
+        throw(ArgumentError(lazy"Got upper_bound with length $(length(upper_bound)); expected $D for DiscretizedGrid{$D}."))
+    end
+end
+
 function _adjust_upper_bounds(upper_bound, lower_bound, includeendpoint, base, Rs, ::Val{D}) where D
     base = _to_tuple(Val(D), base)
     includeendpoint = _to_tuple(Val(D), includeendpoint)
@@ -186,6 +195,7 @@ function DiscretizedGrid{D}(
     upper_bound=default_upper_bound(Val(D));
     kwargs...
 ) where {D}
+    _check_bounds_dim(Val(D), lower_bound, upper_bound)
     return DiscretizedGrid(_to_tuple(Val(D), R); lower_bound, upper_bound, kwargs...)
 end
 
@@ -195,6 +205,7 @@ function DiscretizedGrid(
     upper_bound::NTuple{D,Real};
     kwargs...
 ) where {D}
+    _check_bounds_dim(Val(D), lower_bound, upper_bound)
     return DiscretizedGrid(_to_tuple(Val(D), R); lower_bound, upper_bound, kwargs...)
 end
 
