@@ -387,7 +387,7 @@ function localdimensions(g::DiscretizedGrid)::Vector{Int}
     return copy(g.discretegrid.sitedims)
 end
 
-function quanticsfunction(::Type{T}, g::DiscretizedGrid, f::F)::Function where {T,F<:Function}
+function quanticsfunction(::Type{T}, g::Grid, f::F)::Function where {T,F<:Function}
     function wrapped_function(quantics)::T
         coords = quantics_to_origcoord(g, quantics)
         if coords isa Tuple
@@ -442,9 +442,9 @@ function Base.show(io::IO, ::MIME"text/plain", g::DiscretizedGrid{D}) where D
                 g.includeendpoint[i] ? grid_max(g)[i] : g.upper_bound[i]
             end
             bounds_str = join([
-                "[$(g.lower_bound[i]), $(upper_display[i])$(g.includeendpoint[i] ? "]" : ")")"
-                for i in 1:D
-            ], " × ")
+                    "[$(g.lower_bound[i]), $(upper_display[i])$(g.includeendpoint[i] ? "]" : ")")"
+                    for i in 1:D
+                ], " × ")
             print(io, "\n├─ Domain: $bounds_str")
         end
 

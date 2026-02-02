@@ -1021,3 +1021,12 @@ end
 @testitem "InherentDiscreteGrid 0-dimensional" begin
     g = InherentDiscreteGrid(())
 end
+
+@testitem "InherentDiscreteGrid quanticsfunction" begin
+    R = 10
+    grid = InherentDiscreteGrid{1}(R)
+    f = sin
+    qf = QuanticsGrids.quanticsfunction(Float64, grid, f)
+    q = rand(1:2, R)
+    @test qf(q) == f(quantics_to_origcoord(grid, q))
+end
