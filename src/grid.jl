@@ -392,6 +392,9 @@ function quantics_to_grididx(g::InherentDiscreteGrid{D}, quantics::AbstractVecto
 end
 
 function grididx_to_quantics(g::InherentDiscreteGrid{D}, grididx::Int) where D
+    if D != 1
+        throw(ArgumentError(lazy"grididx_to_quantics(grid, ::Integer) is only supported for 1D grids."))
+    end
     grididx_tuple = _to_tuple(Val(D), grididx)
     return grididx_to_quantics(g, grididx_tuple)
 end

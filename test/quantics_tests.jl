@@ -121,6 +121,14 @@ end
     end
 end
 
+@testitem "grididx_to_quantics integer input only for 1D" begin
+    grid_1d = DiscretizedGrid((4,))
+    @test grididx_to_quantics(grid_1d, 3) == grididx_to_quantics(grid_1d, (3,))
+
+    grid_2d = DiscretizedGrid((2, 3))
+    @test_throws ArgumentError grididx_to_quantics(grid_2d, 1)
+end
+
 @testitem "ctor from indextable" begin
     grid = DiscretizedGrid((:a, :b, :c), [[(:a, 4)], [(:a, 3)], [(:a, 2)], [(:a, 1)], [(:b, 1)], [(:b, 2)], [(:b, 3)], [(:c, 1)], [(:c, 2)], [(:c, 3)]])
     @test QuanticsGrids.grid_Rs(grid) == (4, 3, 3)
