@@ -89,6 +89,7 @@ struct DiscretizedGrid{D} <: Grid{D}
     discretegrid::InherentDiscreteGrid{D}
     lower_bound::NTuple{D,Float64}
     upper_bound::NTuple{D,Float64}
+    includeendpoint::NTuple{D,Bool}
 
     function DiscretizedGrid{D}(
         Rs, lower_bound, upper_bound, variablenames, base, indextable, includeendpoint
@@ -96,6 +97,7 @@ struct DiscretizedGrid{D} <: Grid{D}
         lower_bound = _to_tuple(Val(D), lower_bound)
         upper_bound = _to_tuple(Val(D), upper_bound)
         base = _to_tuple(Val(D), base)
+        includeendpoint = _to_tuple(Val(D), includeendpoint)
         for d in 1:D
             if !(lower_bound[d] < upper_bound[d])
                 throw(ArgumentError(lazy"Got (lower_bound[$d], upper_bound[$d]) = $((lower_bound[d], upper_bound[d])). Each lower bound needs to be strictly less than the corresponding upper bound."))
@@ -108,7 +110,7 @@ struct DiscretizedGrid{D} <: Grid{D}
             upper_bound, lower_bound, includeendpoint, base, Rs, Val(D)
         )
 
-        return new{D}(discretegrid, lower_bound, upper_bound)
+        return new{D}(discretegrid, lower_bound, upper_bound, includeendpoint)
     end
 end
 
@@ -421,9 +423,17 @@ function Base.show(io::IO, ::MIME"text/plain", g::DiscretizedGrid{D}) where D
     default_upper = default_upper_bound(Val(D))
     if lower_bound(g) != default_lower || any(abs.(upper_bound(g) .- default_upper) .> 1e-10)
         if D == 1
-            print(io, "\n├─ Domain: [$(lower_bound(g)[1]), $(upper_bound(g)[1]))")
+            upper_display = g.includeendpoint[1] ? grid_max(g) : g.upper_bound[1]
+            upper_bracket = g.includeendpoint[1] ? "]" : ")"
+            print(io, "\n├─ Domain: [$(g.lower_bound[1]), $(upper_display)$(upper_bracket)")
         else
-            bounds_str = join(["[$(lower_bound(g)[i]), $(upper_bound(g)[i]))" for i in 1:D], " × ")
+            upper_display = ntuple(D) do i
+                g.includeendpoint[i] ? grid_max(g)[i] : g.upper_bound[i]
+            end
+            bounds_str = join([
+                "[$(g.lower_bound[i]), $(upper_display[i])$(g.includeendpoint[i] ? "]" : ")")"
+                for i in 1:D
+            ], " × ")
             print(io, "\n├─ Domain: $bounds_str")
         end
 
