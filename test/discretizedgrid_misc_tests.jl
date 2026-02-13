@@ -72,10 +72,9 @@ end
 
 @testitem "DiscretizedGrid show method" begin
     g = DiscretizedGrid((2, 3, 4))
-    @test try
-        sprint(show, g)
-        true
-    catch e
-        false
-    end
+    text = sprint(show, MIME"text/plain"(), g)
+    @test occursin("Index table: [", text)
+    @test occursin("1:(", text)
+    @test !occursin("Symbol(\"", text)
+    @test !occursin("\n│  ", text)
 end
