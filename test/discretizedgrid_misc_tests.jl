@@ -52,6 +52,15 @@ end
     @test_throws ArgumentError DiscretizedGrid{2}(3, (0.0, 1.0), (1.0,))
 end
 
+@testitem "DiscretizedGrid mixed-type bounds" begin
+    R = 10
+    N = 2^R
+    g = DiscretizedGrid{2}((R, R), (0.0, 0), (2.0, N - 1); includeendpoint=(false, true))
+
+    @test QuanticsGrids.lower_bound(g) == (0.0, 0.0)
+    @test QuanticsGrids.grid_max(g)[2] ≈ N - 1
+end
+
 @testitem "DiscretizedGrid 0-dimensional show method" begin
     g = DiscretizedGrid(())
     @test try

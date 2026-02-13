@@ -56,8 +56,13 @@ end
 _convert_to_scalar_if_possible(x) = x
 _convert_to_scalar_if_possible(x::NTuple{1,T}) where {T} = first(x)
 
-_to_tuple(::Val{d}, x::NTuple{d}) where {d} = x
-_to_tuple(::Val{d}, x) where {d} = ntuple(i -> x, d)
+function _to_tuple(::Val{d}, x::Tuple) where {d}
+    if length(x) != d
+        throw(ArgumentError(lazy"Got tuple with length $(length(x)); expected $d."))
+    end
+    return x
+end
+_to_tuple(::Val{d}, x) where {d} = ntuple(Returns(x), d)
 
 _all_base_two(base::NTuple{D,Int}) where {D} = all(==(2), base)
 

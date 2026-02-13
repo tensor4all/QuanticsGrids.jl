@@ -119,10 +119,10 @@ end
 # ============================================================================
 
 function _check_bounds_dim(::Val{D}, lower_bound, upper_bound) where {D}
-    if lower_bound isa NTuple && length(lower_bound) != D
+    if lower_bound isa Tuple && length(lower_bound) != D
         throw(ArgumentError(lazy"Got lower_bound with length $(length(lower_bound)); expected $D for DiscretizedGrid{$D}."))
     end
-    if upper_bound isa NTuple && length(upper_bound) != D
+    if upper_bound isa Tuple && length(upper_bound) != D
         throw(ArgumentError(lazy"Got upper_bound with length $(length(upper_bound)); expected $D for DiscretizedGrid{$D}."))
     end
 end
