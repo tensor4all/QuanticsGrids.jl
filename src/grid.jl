@@ -61,6 +61,36 @@ _to_tuple(::Val{d}, x) where {d} = ntuple(i -> x, d)
 
 _all_base_two(base::NTuple{D,Int}) where {D} = all(==(2), base)
 
+function _normalize_indextable(indextable)
+    normalized = Vector{Vector{Tuple{Symbol,Int}}}(undef, length(indextable))
+    for (site_idx, site) in pairs(indextable)
+        if !(site isa AbstractVector)
+            throw(ArgumentError(lazy"Index table entry at site $site_idx must be an AbstractVector, got $(typeof(site))."))
+        end
+
+        normalized_site = Vector{Tuple{Symbol,Int}}(undef, length(site))
+        for (position, qindex) in pairs(site)
+            if !(qindex isa Tuple) || length(qindex) != 2
+                throw(ArgumentError(lazy"Index table entry at site $site_idx position $position must be a tuple (Symbol, Int)."))
+            end
+
+            variablename, bitnumber = qindex
+            if !(variablename isa Symbol)
+                throw(ArgumentError(lazy"Index table entry at site $site_idx position $position has invalid variablename $(variablename). Expected Symbol."))
+            end
+            if !(bitnumber isa Integer)
+                throw(ArgumentError(lazy"Index table entry at site $site_idx position $position has invalid bitnumber $(bitnumber). Expected Integer."))
+            end
+
+            normalized_site[position] = (variablename, Int(bitnumber))
+        end
+
+        normalized[site_idx] = normalized_site
+    end
+
+    return normalized
+end
+
 function _base_as_scalar_if_uniform(base::NTuple{D,Int}) where {D}
     if D == 0
         return base
@@ -291,11 +321,12 @@ end
 
 function InherentDiscreteGrid(
     variablenames::NTuple{D,Symbol},
-    indextable::Vector{Vector{Tuple{Symbol,Int}}};
+    indextable::AbstractVector;
     origin=default_origin(Val(D)),
     step=default_step(Val(D)),
     base=2
 ) where D
+    indextable = _normalize_indextable(indextable)
     base = _to_tuple(Val(D), base)
     Rs = map(variablenames) do variablename
         count(index -> first(index) == variablename, Iterators.flatten(indextable))
