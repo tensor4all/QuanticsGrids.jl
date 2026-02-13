@@ -387,6 +387,35 @@ function localdimensions(g::DiscretizedGrid)::Vector{Int}
     return copy(g.discretegrid.sitedims)
 end
 
+function _format_indexsite(site::Vector{Tuple{Symbol,Int}})
+    entries = map(site) do (variablename, bitnumber)
+        "$(string(variablename))[$bitnumber]"
+    end
+    return "(" * join(entries, ", ") * ")"
+end
+
+function _format_indextable_oneline(indextable::Vector{Vector{Tuple{Symbol,Int}}}; max_sites::Int=6)
+    if isempty(indextable)
+        return "[]"
+    end
+
+    total_sites = length(indextable)
+    if total_sites <= max_sites
+        entries = ["$site:$(_format_indexsite(indextable[site]))" for site in 1:total_sites]
+        return "[" * join(entries, ", ") * "]"
+    end
+
+    num_head = max_sites ÷ 2
+    num_tail = max_sites - num_head
+    head_sites = collect(1:num_head)
+    tail_sites = collect(total_sites - num_tail + 1:total_sites)
+
+    head_entries = ["$site:$(_format_indexsite(indextable[site]))" for site in head_sites]
+    tail_entries = ["$site:$(_format_indexsite(indextable[site]))" for site in tail_sites]
+    entries = vcat(head_entries, ["..."], tail_entries)
+    return "[" * join(entries, ", ") * "]"
+end
+
 function quanticsfunction(::Type{T}, g::Grid, f::F)::Function where {T,F<:Function}
     function wrapped_function(quantics)::T
         coords = quantics_to_origcoord(g, quantics)
@@ -483,6 +512,8 @@ function Base.show(io::IO, ::MIME"text/plain", g::DiscretizedGrid{D}) where D
     if grid_base(g) != 2
         print(io, "\n├─ Base: $(grid_base(g))")
     end
+
+    print(io, "\n├─ Index table: $(_format_indextable_oneline(grid_indextable(g)))")
 
     # Tensor structure summary
     num_sites = length(grid_indextable(g))
