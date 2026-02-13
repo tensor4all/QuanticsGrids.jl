@@ -94,8 +94,8 @@ struct DiscretizedGrid{D} <: Grid{D}
     function DiscretizedGrid{D}(
         Rs, lower_bound, upper_bound, variablenames, base, indextable, includeendpoint
     ) where {D}
-        lower_bound = _to_tuple(Val(D), lower_bound)
-        upper_bound = _to_tuple(Val(D), upper_bound)
+        lower_bound = _to_float_tuple(Val(D), lower_bound)
+        upper_bound = _to_float_tuple(Val(D), upper_bound)
         base = _to_tuple(Val(D), base)
         includeendpoint = _to_tuple(Val(D), includeendpoint)
         for d in 1:D
@@ -126,6 +126,15 @@ function _check_bounds_dim(::Val{D}, lower_bound, upper_bound) where {D}
         throw(ArgumentError(lazy"Got upper_bound with length $(length(upper_bound)); expected $D for DiscretizedGrid{$D}."))
     end
 end
+
+function _to_float_tuple(::Val{D}, x::Tuple) where {D}
+    if length(x) != D
+        throw(ArgumentError(lazy"Got tuple with length $(length(x)); expected $D."))
+    end
+    return ntuple(d -> Float64(x[d]), D)
+end
+
+_to_float_tuple(::Val{D}, x) where {D} = ntuple(_ -> Float64(x), D)
 
 function _adjust_upper_bounds(upper_bound, lower_bound, includeendpoint, base, Rs, ::Val{D}) where D
     base = _to_tuple(Val(D), base)
