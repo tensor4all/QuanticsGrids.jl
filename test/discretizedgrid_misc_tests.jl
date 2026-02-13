@@ -47,6 +47,24 @@ end
     @test g.discretegrid.lookup_table == g´.discretegrid.lookup_table == g´´.discretegrid.lookup_table
 end
 
+@testitem "DiscretizedGrid accepts untyped indextable container" begin
+    R = 10
+    N = 2^R
+    lower_bound = (0.0, 0.0)
+    upper_bound = (2.0, N - 1.0)
+
+    indextable = []
+    for l in 1:R
+        push!(indextable, [(:w, l)])
+        push!(indextable, [(:n, R - l + 1)])
+    end
+
+    g = DiscretizedGrid((:w, :n), indextable; lower_bound, upper_bound, includeendpoint=(false, true))
+    @test QuanticsGrids.grid_variablenames(g) == (:w, :n)
+    @test length(QuanticsGrids.grid_indextable(g)) == 2R
+    @test QuanticsGrids.grid_max(g)[2] ≈ N - 1
+end
+
 @testitem "DiscretizedGrid dimension mismatch for bounds" begin
     @test_throws ArgumentError DiscretizedGrid{2}(3, (0.0,), (1.0, 2.0))
     @test_throws ArgumentError DiscretizedGrid{2}(3, (0.0, 1.0), (1.0,))

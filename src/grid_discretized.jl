@@ -211,12 +211,13 @@ end
 
 function DiscretizedGrid(
     variablenames::NTuple{D,Symbol},
-    indextable::Vector{Vector{Tuple{Symbol,Int}}};
+    indextable::AbstractVector;
     lower_bound=default_lower_bound(Val(D)),
     upper_bound=default_upper_bound(Val(D)),
     base=2,
     includeendpoint=false
 ) where D
+    indextable = _normalize_indextable(indextable)
     Rs = map(variablenames) do variablename
         count(index -> first(index) == variablename, Iterators.flatten(indextable))
     end
