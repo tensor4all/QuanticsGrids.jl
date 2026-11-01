@@ -77,7 +77,8 @@
         end
     end
 
-    @testset "InherentDiscreteGrid" for unfoldingscheme in [:interleaved, :fused],
+    @testset "InherentDiscreteGrid" for
+        unfoldingscheme in [:interleaved, :fused, :serial, :meander],
         step in [(1, 1, 1), (1, 1, 2)],
         origin in [(1, 1, 1), (1, 1, 2)]
 
@@ -85,10 +86,10 @@
         @test QuanticsGrids.grid_min(m) == origin
         @test QuanticsGrids.grid_step(m) == step
 
-        if unfoldingscheme === :interleaved
-            @test QuanticsGrids.localdimensions(m) == fill(2, 3 * 5)
-        else
+        if unfoldingscheme === :fused
             @test QuanticsGrids.localdimensions(m) == fill(2^3, 5)
+        else
+            @test QuanticsGrids.localdimensions(m) == fill(2, 3 * 5)
         end
 
         for idx in [(1, 1, 1), (1, 1, 2), (1, 25, 1), (14, 1, 1), (25, 25, 25)]
@@ -157,7 +158,7 @@
             @test only(QuanticsGrids.quantics_to_origcoord(g, fill(2, R))) == b
         end
 
-        @testset "2D" for unfoldingscheme in [:interleaved, :fused]
+        @testset "2D" for unfoldingscheme in [:interleaved, :fused, :serial, :meander]
             R = 5
             d = 2
             a = (0.1, 0.1)
@@ -165,10 +166,10 @@
             dx = (b .- a) ./ 2^R
             g = QuanticsGrids.DiscretizedGrid{d}(R, a, b; unfoldingscheme)
 
-            if unfoldingscheme === :interleaved
-                @test QuanticsGrids.localdimensions(g) == fill(2, d * R)
-            else
+            if unfoldingscheme === :fused
                 @test QuanticsGrids.localdimensions(g) == fill(2^d, R)
+            else
+                @test QuanticsGrids.localdimensions(g) == fill(2, d * R)
             end
 
             @test QuanticsGrids.lower_bound(g) == (0.1, 0.1)
@@ -194,7 +195,7 @@
             @test_throws DomainError QuanticsGrids.origcoord_to_grididx(g, (3.0, 3.0))
         end
 
-        @testset "2D (includeendpoint)" for unfoldingscheme in [:interleaved, :fused]
+        @testset "2D (includeendpoint)" for unfoldingscheme in [:interleaved, :fused, :serial, :meander]
             R = 5
             d = 2
             a = (0.1, 0.1)
@@ -209,10 +210,10 @@
             )
             @test all(QuanticsGrids.grid_step(g) .≈ dx)
 
-            if unfoldingscheme === :interleaved
-                @test QuanticsGrids.localdimensions(g) == fill(2, d * R)
-            else
+            if unfoldingscheme === :fused
                 @test QuanticsGrids.localdimensions(g) == fill(2^d, R)
+            else
+                @test QuanticsGrids.localdimensions(g) == fill(2, d * R)
             end
         end
     end
@@ -255,5 +256,91 @@
         @test g4 isa QuanticsGrids.InherentDiscreteGrid{3}
         @test QuanticsGrids.grid_origin(g4) == (1, 2, 3)
         @test QuanticsGrids.grid_step(g4) == (1, 2, 1)
+    end
+end
+
+@testitem "unfolding schemes :serial and :meander" begin
+    using Test
+    import QuanticsGrids
+
+    schemes = [:fused, :interleaved, :serial, :meander]
+
+    # 1D grids return a scalar index instead of a 1-tuple
+    expected_index(d, grididx) = d == 1 ? grididx[1] : grididx
+
+    @testset "roundtrip ($d dims, base = $base, R = $R, $unfoldingscheme)" for
+        d in 1:3, base in (2, 3), R in 1:3, unfoldingscheme in schemes
+
+        grid = QuanticsGrids.InherentDiscreteGrid{d}(
+            ntuple(_ -> R, d); base, unfoldingscheme
+        )
+        for cartesian in CartesianIndices(ntuple(_ -> Base.OneTo(base^R), d))
+            grididx = Tuple(cartesian)
+            quantics = QuanticsGrids.grididx_to_quantics(grid, grididx)
+            @test QuanticsGrids.quantics_to_grididx(grid, quantics) == expected_index(d, grididx)
+        end
+    end
+
+    @testset "DiscretizedGrid roundtrip ($d dims, base = $base, R = $R, $unfoldingscheme)" for
+        d in 1:2, base in (2, 3), R in 1:2, unfoldingscheme in schemes
+
+        grid = QuanticsGrids.DiscretizedGrid{d}(R; base, unfoldingscheme)
+        for cartesian in CartesianIndices(ntuple(_ -> Base.OneTo(base^R), d))
+            grididx = Tuple(cartesian)
+            quantics = QuanticsGrids.grididx_to_quantics(grid, grididx)
+            @test QuanticsGrids.quantics_to_grididx(grid, quantics) == expected_index(d, grididx)
+        end
+    end
+
+    # Pinned digit sequences: the base-2 digits of grididx - 1 are written most
+    # significant first, i.e. X = 2 is x = (1, 2) and Y = 4 is y = (2, 2).
+    @testset "digit ordering (d = 2, R = 1, base = 2)" begin
+        grid_for(scheme) = QuanticsGrids.InherentDiscreteGrid{2}((1, 1); unfoldingscheme=scheme)
+        for scheme in [:interleaved, :serial, :meander]
+            @test QuanticsGrids.grididx_to_quantics(grid_for(scheme), (1, 1)) == [1, 1]
+            @test QuanticsGrids.grididx_to_quantics(grid_for(scheme), (2, 1)) == [2, 1]
+            @test QuanticsGrids.grididx_to_quantics(grid_for(scheme), (1, 2)) == [1, 2]
+            @test QuanticsGrids.grididx_to_quantics(grid_for(scheme), (2, 2)) == [2, 2]
+        end
+        @test QuanticsGrids.grididx_to_quantics(grid_for(:fused), (1, 1)) == [1]
+        @test QuanticsGrids.grididx_to_quantics(grid_for(:fused), (2, 1)) == [2]
+        @test QuanticsGrids.grididx_to_quantics(grid_for(:fused), (1, 2)) == [3]
+        @test QuanticsGrids.grididx_to_quantics(grid_for(:fused), (2, 2)) == [4]
+    end
+
+    # With more than one digit per variable the schemes differ: :serial is
+    # x_1 x_2 y_1 y_2, :meander reverses the odd-numbered variables (x_2 x_1 y_1 y_2),
+    # :interleaved is x_1 y_1 x_2 y_2 and :fused fuses (x_i, y_i) per digit level.
+    @testset "digit ordering (d = 2, R = 2, base = 2)" begin
+        grid_for(scheme) = QuanticsGrids.InherentDiscreteGrid{2}((2, 2); unfoldingscheme=scheme)
+
+        @test QuanticsGrids.grididx_to_quantics(grid_for(:serial), (2, 1)) == [1, 2, 1, 1]
+        @test QuanticsGrids.grididx_to_quantics(grid_for(:serial), (3, 4)) == [2, 1, 2, 2]
+        @test QuanticsGrids.grididx_to_quantics(grid_for(:meander), (2, 1)) == [2, 1, 1, 1]
+        @test QuanticsGrids.grididx_to_quantics(grid_for(:meander), (3, 4)) == [1, 2, 2, 2]
+        @test QuanticsGrids.grididx_to_quantics(grid_for(:interleaved), (2, 1)) == [1, 1, 2, 1]
+        @test QuanticsGrids.grididx_to_quantics(grid_for(:interleaved), (3, 4)) == [2, 2, 1, 2]
+        @test QuanticsGrids.grididx_to_quantics(grid_for(:fused), (2, 1)) == [1, 2]
+        @test QuanticsGrids.grididx_to_quantics(grid_for(:fused), (3, 4)) == [4, 3]
+
+        @test QuanticsGrids.localdimensions(grid_for(:serial)) == [2, 2, 2, 2]
+        @test QuanticsGrids.localdimensions(grid_for(:meander)) == [2, 2, 2, 2]
+    end
+
+    @testset ":serial is the :grouped ordering" for d in 1:3
+        grid_for(scheme) = QuanticsGrids.InherentDiscreteGrid{d}(
+            ntuple(_ -> 3, d); unfoldingscheme=scheme
+        )
+        @test QuanticsGrids.grid_indextable(grid_for(:serial)) ==
+              QuanticsGrids.grid_indextable(grid_for(:grouped))
+        if d > 1
+            @test QuanticsGrids.grid_indextable(grid_for(:meander)) !=
+                  QuanticsGrids.grid_indextable(grid_for(:serial))
+        end
+    end
+
+    @testset "invalid unfoldingscheme is rejected" begin
+        @test_throws ArgumentError QuanticsGrids.InherentDiscreteGrid{2}((3, 3); unfoldingscheme=:invalid)
+        @test_throws ArgumentError QuanticsGrids.DiscretizedGrid{2}((3, 3); unfoldingscheme=:invalid)
     end
 end

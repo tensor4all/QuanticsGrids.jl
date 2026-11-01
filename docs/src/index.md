@@ -30,7 +30,7 @@ In this library, the $B$-base representation of $X$ is represented by the vector
 [x_1, \cdots, x_R].
 ```
 
-This library supports two unfolding schemes (interleaved and fused representations) for handling multiple variables.
+This library supports several unfolding schemes (interleaved, fused, grouped, serial and meander representations) for handling multiple variables.
 As an example, we consider three variables $X$, $Y$ and $Z$.
 Their $B$-base representations are given by
 
@@ -65,6 +65,19 @@ with
 
 This convention is consistent with the column major used in Julia: At each digit level $i$, the bit for $x$ runs fastest.
 The fused representation generalizes to any number of variables.
+
+The grouped representation (also available under the name `:serial`) lists the digits
+of one variable after another,
+
+```math
+[x_1, \cdots, x_R, y_1, \cdots, y_R, z_1, \cdots, z_R],
+```
+
+and the meander representation additionally reverses the digit order of odd-numbered variables,
+
+```math
+[x_R, \cdots, x_1, y_1, \cdots, y_R, z_R, \cdots, z_1].
+```
 
 
 ## Usage
@@ -135,7 +148,7 @@ grid = QG.DiscretizedGrid{1}(R, xmin, xmax; includeendpoint=true)
 
 ## Creating a $d$-dimensional grid
 A $d$-dimensional grid, where each axis is discretized with $R$ bits, can be generated in a similar way as follows.
-As an option, you can choose the fused representation (`:fused`) or the interleaved representation (`:interleaved`).
+As an option, you can choose the fused representation (`:fused`, the default) or one of the interleaved (`:interleaved`), grouped (`:grouped`/`:serial`) and meander (`:meander`) representations described above.
 
 ### fused representation
 ```@example simple

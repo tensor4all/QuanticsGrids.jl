@@ -182,15 +182,27 @@ function rangecheck_R(R::Int; base::Int=2)::Bool
     return true
 end
 
+# Ordering of the digits of the variables x, y, z, ... in the quantics
+# representation. The digits of one variable are written most significant first,
+# so x_1 is the leading and x_R the trailing base-B digit of X:
+#   :interleaved  x_1 y_1 z_1 x_2 y_2 z_2 ...
+#   :fused        x_i y_i z_i fused into one site per digit level, x fastest
+#   :grouped      x_1 ... x_R y_1 ... y_R z_1 ... z_R
+#   :serial       same ordering as :grouped, the name used in
+#                 tensor4all/QuanticsGrids.jl#22
+#   :meander      as :serial, but odd-numbered variables run least significant
+#                 first: x_R ... x_1 y_1 ... y_R z_R ... z_1
 function _build_indextable(variablenames::NTuple{D,Symbol}, Rs::NTuple{D,Int}, unfoldingscheme::Symbol) where D
-    if !(unfoldingscheme in (:interleaved, :fused, :grouped))
-        throw(ArgumentError(lazy"Got unfoldingscheme = $unfoldingscheme. Supported are :interleaved, :fused and :grouped."))
+    if !(unfoldingscheme in (:interleaved, :fused, :grouped, :serial, :meander))
+        throw(ArgumentError(lazy"Got unfoldingscheme = $unfoldingscheme. Supported are :interleaved, :fused, :grouped, :serial and :meander."))
     end
     indextable = Vector{Tuple{Symbol,Int}}[]
 
-    if unfoldingscheme === :grouped
+    if unfoldingscheme in (:grouped, :serial, :meander)
         for d in 1:D
-            for bitnumber in 1:Rs[d]
+            # :meander traverses the digits of odd-numbered variables in reverse
+            bitnumbers = unfoldingscheme === :meander && isodd(d) ? (Rs[d]:-1:1) : (1:Rs[d])
+            for bitnumber in bitnumbers
                 qindex = (variablenames[d], bitnumber)
                 push!(indextable, [qindex])
             end
