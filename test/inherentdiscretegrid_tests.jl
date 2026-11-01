@@ -1,5 +1,5 @@
 @testitem "InherentDiscreteGrid" begin
-    for unfoldingscheme in [:interleaved, :fused],
+    for unfoldingscheme in [:interleaved, :fused, :serial, :meander],
         step in [(1, 1, 1), (1, 1, 2)],
         origin in [(1, 1, 1), (1, 1, 2)]
 
@@ -7,10 +7,10 @@
         @test QuanticsGrids.grid_min(m) == origin
         @test QuanticsGrids.grid_step(m) == step
 
-        if unfoldingscheme === :interleaved
-            @test QuanticsGrids.localdimensions(m) == fill(2, 3 * 5)
-        else
+        if unfoldingscheme === :fused
             @test QuanticsGrids.localdimensions(m) == fill(2^3, 5)
+        else
+            @test QuanticsGrids.localdimensions(m) == fill(2, 3 * 5)
         end
 
         for idx in [(1, 1, 1), (1, 1, 2), (1, 25, 1), (14, 1, 1), (25, 25, 25)]
